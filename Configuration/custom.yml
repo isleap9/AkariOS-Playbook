@@ -1,0 +1,12 @@
+---
+title: Custom
+description: Custom AkariOS configuration
+privilege: Admin
+actions: 
+- !task: {path: 'AkariOS\tweaks\registry.yml'}
+- !task: {path: 'AkariOS\tweaks\services.yml'}
+- !task: {path: 'AkariOS\tweaks\commands.yml'}
+- !task: {path: 'AkariOS\debloat\components.yml'}
+- !task: {path: 'AkariOS\debloat\appx.yml'}
+- !task: {path: 'AkariOS\tweaks\ScheduledTasks.yml'}
+- !task: {path: 'AkariOS\FinalTasks.yml'}

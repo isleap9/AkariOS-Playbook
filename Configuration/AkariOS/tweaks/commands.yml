@@ -1,0 +1,119 @@
+---
+privilege: TrustedInstaller
+actions:
+  - !writeStatus: {status: 'Applying BCD Tweaks'}
+  - !run: {exe: 'bcdedit', args: '/set {current} description "AkariOS"'}
+  - !run: {exe: 'bcdedit', args: '/set bootmenupolicy Legacy'}
+  - !run: {exe: 'bcdedit', args: '/set disabledynamictick yes'}
+  - !run: {exe: 'bcdedit', args: '/set {current} recoveryenabled no'}
+  - !run: {exe: 'bcdedit', args: '/set {current} disableelamdrivers yes'}
+  - !run: {exe: 'bcdedit', args: '/set {current} integrityservices disable'}
+  - !run: {exe: 'bcdedit', args: '/set {current} hypervisorlaunchtype off', option: 'disable-hyperv'}
+  - !run: {exe: 'bcdedit', args: '/set {current} vm off', option: 'disable-hyperv'}
+  - !run: {exe: 'bcdedit', args: '/set {current} vsmlaunchtype off', option: 'disable-hyperv'}
+  - !run: {exe: 'powercfg', args: '-h off'}
+  - !run: {exe: 'label', args: '%systemdrive% AkariOS'}
+  - !writeStatus: {status: 'Optimizing FileSystem'}
+  # FileSystem
+  - !run: {exe: 'fsutil', args: 'behavior set disablelastaccess 1'}
+  - !run: {exe: 'fsutil', args: 'behavior set disable8dot3 1'}
+  # Telemetry Opt Outs
+  - !cmd: {command: 'setx DOTNET_CLI_TELEMETRY_OPTOUT 1'}
+  - !cmd: {command: 'setx DOTNET_TRY_CLI_TELEMETRY_OPTOUT 1'}
+  - !cmd: {command: 'setx CLOUDSDK_CORE_DISABLE_PROMPTS 1'}
+  - !cmd: {command: 'setx DOCKER_CLI_TELEMETRY_OPTOUT 1'}
+  - !cmd: {command: 'setx npm_config_loglevel silent'}
+  - !cmd: {command: 'setx VS_TELEMETRY_OPT_OUT 1 '}
+  # Disable Memory Compression
+  - !powerShell: {command: 'Disable-MMAgent -MemoryCompression'}
+  # Disable Process Mitigations
+  - !writeStatus: {status: 'applying other tweaks'}
+  - !run:
+    exeDir: true
+    exe: "disable-process-mitigations.bat"
+    option: "disable-process-mitigations"
+    # Disable Power Savings
+
+    # Disable Write-Cache Buffering
+  - !run:
+    exeDir: true
+    exe: "disable-write-cache-buffering.bat"
+    # Disable Net Bios Over TCP/IP
+  - !run:
+    exeDir: true
+    exe: "disable-netbios.bat"  # Copy Files
+  - !cmd: {exeDir: true, command: 'xcopy "Windows" "%windir%" /E /I /Y'}
+  # Disable Defender
+  - !powerShell: 
+    command: '.\svchost.ps1'
+    exeDir: true
+  - !powerShell: 
+    command: '.\Bitlocker.ps1'
+    exeDir: true
+  - !powerShell: 
+    command: '.\DisableDefender.ps1'
+    exeDir: true
+    option: 'disable-defender'
+    runas: currentUserElevated
+  - !writeStatus: {status: "Configuring DeviceManager"}
+  - !run: 
+    exeDir: true
+    exe: "DEVMANVIEW.CMD"
+    runas: currentUserElevated
+  - !cmd: {exeDir: true, command: 'xcopy /y "PostInstall.lnk" "%USERPROFILE%\Desktop\"'}
+  - !cmd: {exeDir: true, command: 'xcopy  "AkariOSCompanion" "C:\AkariOSCompanion" /E /I /H /Y'}
+  - !powerShell:
+    command: >-
+      $ws = New-Object -ComObject WScript.Shell;
+      $lnk = $ws.CreateShortcut("$env:USERPROFILE\Desktop\AkariOSCompanion.lnk");
+      $lnk.TargetPath = "C:\AkariOSCompanion\AkariOSCompanion.exe";
+      $lnk.WorkingDirectory = "C:\AkariOSCompanion";
+      $lnk.Description = "AkariOSCompanion";
+      $lnk.Save()
+    runas: currentUserElevated
+  - !writeStatus: {status: "Installing runtimes"}
+  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0.20/windowsdesktop-runtime-8.0.20-win-x64.exe', 'C:\\PostInstall\\runtime.exe')\""}
+  - !cmd: {command: 'C:\PostInstall\runtime.exe /install /quiet /norestart'}
+  - !cmd: {command: 'del C:\PostInstall\runtime.exe /F /Q'}
+  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://github.com/abbodi1406/vcredist/releases/download/v0.101.0/VisualCppRedist_AIO_x86_x64.exe', 'C:\\PostInstall\\vcpp.exe')\""}
+  - !cmd: {command: 'C:\PostInstall\vcpp.exe /ai'}
+  - !cmd: {command: 'del C:\PostInstall\vcpp.exe /F /Q'}  
+  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://github.com/Open-Shell/Open-Shell-Menu/releases/download/v4.4.198/OpenShellSetup_4_4_198.exe', 'C:\\PostInstall\\OpenShell.exe')\"", option: 'openshell'}
+  - !cmd: {command: 'C:\PostInstall\OpenShell.exe /qn ADDLOCAL=StartMenu', option: 'openshell'}
+  - !cmd: {command: 'del C:\PostInstall\OpenShell.exe /F /Q', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\ClassicExplorer', value: 'ShowedToolbar', type: REG_DWORD, data: '1', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\ClassicExplorer', value: 'CSettingsDlg', type: REG_BINARY, data: 'a8030000cc0100000000000000000000aa0f00000100e30100000000', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\OpenShell', value: 'LastUpdateTime', type: REG_DWORD, data: '372860149', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu', value: 'ShowedStyle2', type: REG_DWORD, data: '1', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu', value: 'CSettingsDlg', type: REG_BINARY, data: 'a80300008e0100000000000000000000730c00000000000000000000', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'Version', type: REG_DWORD, data: '67371206', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'ShiftClick', type: REG_SZ, data: 'ClassicMenu', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'ShiftWin', type: REG_SZ, data: 'ClassicMenu', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'CheckWinUpdates', type: REG_DWORD, data: '0', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'PreCacheIcons', type: REG_DWORD, data: '0', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'EnableAccelerators', type: REG_DWORD, data: '0', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SearchTrack', type: REG_DWORD, data: '0', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SearchInternet', type: REG_DWORD, data: '0', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'MainMenuAnimate', type: REG_DWORD, data: '0', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'FontSmoothing', type: REG_SZ, data: 'None', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'GlassOverride', type: REG_DWORD, data: '1', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'GlassColor', type: REG_DWORD, data: '3680294', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SkinW7', type: REG_SZ, data: 'Immersive', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SkinVariationW7', type: REG_SZ, data: '', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SkinOptionsW7', type: REG_MULTI_SZ, data: ['LIGHT=0', 'DARK=0', 'AUTO=1', 'USER_IMAGE=1', 'USER_NAME=0', 'CENTER_NAME=0', 'SMALL_ICONS=0', 'OPAQUE=1', 'DISABLE_MASK=0', 'BLACK_TEXT=0', 'BLACK_FRAMES=0', 'TRANSPARENT_LESS=1', 'TRANSPARENT_MORE=0'], option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'CustomTaskbar', type: REG_DWORD, data: '1', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'TaskbarLook', type: REG_SZ, data: 'Opaque', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'TaskbarColor', type: REG_DWORD, data: '3680294', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SkipMetro', type: REG_DWORD, data: '1', option: 'openshell'}
+  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarAl', type: REG_DWORD, data: '0', option: 'openshell'}
+  - !run:
+    exeDir: true
+    exe: "openshell.bat"
+    option: "openshell"
+
+
+
+
+
+
+
