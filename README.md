@@ -4,7 +4,7 @@
 
 **A Windows debloat & performance Playbook for AME Beta**
 
-![Version](https://img.shields.io/badge/version-4.2.0-blueviolet)
+![Version](https://img.shields.io/badge/version-1.0.0-blueviolet)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows)
 ![Playbook](https://img.shields.io/badge/AME%20Beta-Playbook-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
