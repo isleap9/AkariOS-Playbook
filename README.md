@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌸 AkariOS
+# AkariOS
 
 **A Windows debloat & performance Playbook for AME Beta**
 
