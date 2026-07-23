@@ -60,60 +60,23 @@ actions:
     exeDir: true
     exe: "DEVMANVIEW.CMD"
     runas: currentUserElevated
-  - !cmd: {exeDir: true, command: 'xcopy /y "PostInstall.lnk" "%USERPROFILE%\Desktop\"'}
-  - !cmd: {exeDir: true, command: 'xcopy  "AkariOSCompanion" "C:\AkariOSCompanion" /E /I /H /Y'}
-  - !powerShell:
-    command: >-
-      $ws = New-Object -ComObject WScript.Shell;
-      $lnk = $ws.CreateShortcut("$env:USERPROFILE\Desktop\AkariOSCompanion.lnk");
-      $lnk.TargetPath = "C:\AkariOSCompanion\AkariOSCompanion.exe";
-      $lnk.WorkingDirectory = "C:\AkariOSCompanion";
-      $lnk.Description = "AkariOSCompanion";
-      $lnk.Save()
-    runas: currentUserElevated
   - !writeStatus: {status: "Installing runtimes"}
-  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0.20/windowsdesktop-runtime-8.0.20-win-x64.exe', 'C:\\PostInstall\\runtime.exe')\""}
-  - !cmd: {command: 'C:\PostInstall\runtime.exe /install /quiet /norestart'}
-  - !cmd: {command: 'del C:\PostInstall\runtime.exe /F /Q'}
-  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://github.com/abbodi1406/vcredist/releases/download/v0.101.0/VisualCppRedist_AIO_x86_x64.exe', 'C:\\PostInstall\\vcpp.exe')\""}
-  - !cmd: {command: 'C:\PostInstall\vcpp.exe /ai'}
-  - !cmd: {command: 'del C:\PostInstall\vcpp.exe /F /Q'}  
-  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://github.com/Open-Shell/Open-Shell-Menu/releases/download/v4.4.198/OpenShellSetup_4_4_198.exe', 'C:\\PostInstall\\OpenShell.exe')\"", option: 'openshell'}
-  - !cmd: {command: 'C:\PostInstall\OpenShell.exe /qn ADDLOCAL=StartMenu', option: 'openshell'}
-  - !cmd: {command: 'del C:\PostInstall\OpenShell.exe /F /Q', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\ClassicExplorer', value: 'ShowedToolbar', type: REG_DWORD, data: '1', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\ClassicExplorer', value: 'CSettingsDlg', type: REG_BINARY, data: 'a8030000cc0100000000000000000000aa0f00000100e30100000000', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\OpenShell', value: 'LastUpdateTime', type: REG_DWORD, data: '372860149', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu', value: 'ShowedStyle2', type: REG_DWORD, data: '1', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu', value: 'CSettingsDlg', type: REG_BINARY, data: 'a80300008e0100000000000000000000730c00000000000000000000', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'Version', type: REG_DWORD, data: '67371206', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'ShiftClick', type: REG_SZ, data: 'ClassicMenu', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'ShiftWin', type: REG_SZ, data: 'ClassicMenu', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'CheckWinUpdates', type: REG_DWORD, data: '0', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'PreCacheIcons', type: REG_DWORD, data: '0', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'EnableAccelerators', type: REG_DWORD, data: '0', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SearchTrack', type: REG_DWORD, data: '0', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SearchInternet', type: REG_DWORD, data: '0', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'MainMenuAnimate', type: REG_DWORD, data: '0', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'FontSmoothing', type: REG_SZ, data: 'None', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'GlassOverride', type: REG_DWORD, data: '1', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'GlassColor', type: REG_DWORD, data: '3680294', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SkinW7', type: REG_SZ, data: 'Immersive', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SkinVariationW7', type: REG_SZ, data: '', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SkinOptionsW7', type: REG_MULTI_SZ, data: ['LIGHT=0', 'DARK=0', 'AUTO=1', 'USER_IMAGE=1', 'USER_NAME=0', 'CENTER_NAME=0', 'SMALL_ICONS=0', 'OPAQUE=1', 'DISABLE_MASK=0', 'BLACK_TEXT=0', 'BLACK_FRAMES=0', 'TRANSPARENT_LESS=1', 'TRANSPARENT_MORE=0'], option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'CustomTaskbar', type: REG_DWORD, data: '1', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'TaskbarLook', type: REG_SZ, data: 'Opaque', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'TaskbarColor', type: REG_DWORD, data: '3680294', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\OpenShell\StartMenu\Settings', value: 'SkipMetro', type: REG_DWORD, data: '1', option: 'openshell'}
-  - !registryValue: {path: 'HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarAl', type: REG_DWORD, data: '0', option: 'openshell'}
-  - !run:
-    exeDir: true
-    exe: "openshell.bat"
-    option: "openshell"
-
-
-
-
-
-
-
+  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0.20/windowsdesktop-runtime-8.0.20-win-x64.exe', \"$env:TEMP\\runtime.exe\")\""}
+  - !cmd: {command: '"%TEMP%\runtime.exe" /install /quiet /norestart'}
+  - !cmd: {command: 'del "%TEMP%\runtime.exe" /F /Q'}
+  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://github.com/abbodi1406/vcredist/releases/download/v0.101.0/VisualCppRedist_AIO_x86_x64.exe', \"$env:TEMP\\vcpp.exe\")\""}
+  - !cmd: {command: '"%TEMP%\vcpp.exe" /ai'}
+  - !cmd: {command: 'del "%TEMP%\vcpp.exe" /F /Q'}
+  - !writeStatus: {status: "Installing Akari Tool"}
+  - !cmd:
+      command: >-
+        powershell -NoProfile -ExecutionPolicy Bypass -Command
+        "$ErrorActionPreference='Stop';
+        $h=@{'User-Agent'='AkariOS-Playbook'};
+        $r=Invoke-RestMethod -Headers $h -Uri 'https://api.github.com/repos/isleap9/Akari-Tool/releases/latest';
+        $a=$r.assets | Where-Object { $_.name -like 'AkariTool-Setup*.exe' } | Select-Object -First 1;
+        if(-not $a){ throw 'No AkariTool setup asset found' };
+        $out=Join-Path $env:TEMP 'AkariTool-Setup.exe';
+        Invoke-WebRequest -Headers $h -Uri $a.browser_download_url -OutFile $out;
+        Start-Process -FilePath $out -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/TASKS=desktopicon' -Wait;
+        Remove-Item $out -Force -ErrorAction SilentlyContinue"
