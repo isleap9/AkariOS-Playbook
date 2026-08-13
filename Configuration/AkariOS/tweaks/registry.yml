@@ -234,9 +234,7 @@ actions:
   - !registryValue: {path: 'HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Power', value: 'CoalescingTimerInterval', type: REG_DWORD, data: '0'}
   - !registryValue: {path: 'HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Power', value: 'DisableIdleStatesAtBoot', type: REG_DWORD, data: '2'}
   - !registryValue: {path: 'HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Power', value: 'PerfCalculateActualUtilization', type: REG_DWORD, data: '0'}
-  - !registryValue: {path: 'HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Power', value: 'EnergyEstimationEnabled', type: REG_DWORD, data: '0'}
   - !registryValue: {path: 'HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Power', value: 'FxAccountingTelemetryDisabled', type: REG_DWORD, data: '0'}
-  - !registryValue: {path: 'HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Power', value: 'EventProcessorEnabled', type: REG_DWORD, data: '0'}
   - !registryValue: {path: 'HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Power', value: 'ThermalTelemetryVerbosity', type: REG_DWORD, data: '0'}
   - !registryValue: {path: 'HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Power', value: 'SleepstudyAccountingEnabled', type: REG_DWORD, data: '0'}
   - !registryValue: {path: 'HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Session Manager\Power', value: 'SleepStudyDisabled', type: REG_DWORD, data: '1'}
