@@ -1,6 +1,6 @@
 @echo off
 Echo "Reverting Network Tweaks"
-:: using minsudo because of AkariTool
+:: using minsudo because of SapphireTool
 C:\PostInstall\Tweaks\MinSudo.exe --NoLogo --TrustedInstaller --Privileged cmd /c "netsh winsock reset"
 cls
 Echo "Network Tweaks are Reverted"

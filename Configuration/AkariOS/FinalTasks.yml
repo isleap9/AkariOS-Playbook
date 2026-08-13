@@ -5,9 +5,12 @@ actions:
   - !appx: {operation: clearCache, name: '*StartMenuExperienceHost*'}
   - !appx: {operation: clearCache, name: '*Windows.Search*'}
   - !appx: {operation: clearCache, name: '*TCUI*'}
-  - !powerShell: {command: '.\WALLPAPER.ps1 -Mode Desktop -ImagePath $env:systemroot\Web\Akari\img0.jpg', exeDir: true, runas: currentUserElevated}
+  - !powerShell: {command: '.\WALLPAPER.ps1 -Mode Desktop -ImagePath $env:systemroot\Web\AkariOS\img0.png', exeDir: true, runas: currentUserElevated}
   - !writeStatus: {status: 'Tweaking PowerPlan'}
+  - !run: {exe: 'powercfg', args: '-restoredefaultschemes'}
   - !run:
     exeDir: true
     exe: "powerplan.bat"
   - !run: {exe: 'DISM.exe', args: '/Online /set-reservedstoragestate /state:disabled'}
+  - !file:
+    path: "%SystemDrive%\\Windows\\System32\\OneDriveSetup.exe"

@@ -10,10 +10,8 @@ for %%a in (8 9 10 11 12 13 14 18 21 30 31 32) do (
 )
 
 if /I "%DEVICE_TYPE%"=="LAPTOP" (
-    Reg.exe add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v "PowerThrottlingOff" /t REG_DWORD /d "0" /f >nul 2>&1
     cls
 ) else (
-    Reg.exe add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v "PowerThrottlingOff" /t REG_DWORD /d "1" /f >nul 2>&1
     Reg.exe add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\serenum" /v "Start" /t REG_DWORD /d "4" /f >nul 2>&1
     Reg.exe add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\sermouse" /v "Start" /t REG_DWORD /d "4" /f >nul 2>&1
     Reg.exe add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\serial" /v "Start" /t REG_DWORD /d "4" /f >nul 2>&1
@@ -36,7 +34,6 @@ if /I "%DEVICE_TYPE%"=="LAPTOP" (
             Reg.exe add "%%b" /v "%%a" /t REG_DWORD /d "0" /f >nul 2>&1
         )
     )
-    Reg.exe add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v "PowerThrottlingOff" /t REG_DWORD /d "1" /f >nul 2>&1
     cls
 )
 Echo "Disabling HIPM, DIPM and HDDParking"

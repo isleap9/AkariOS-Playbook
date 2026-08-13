@@ -24,8 +24,6 @@ actions:
   - !cmd: {command: 'setx DOCKER_CLI_TELEMETRY_OPTOUT 1'}
   - !cmd: {command: 'setx npm_config_loglevel silent'}
   - !cmd: {command: 'setx VS_TELEMETRY_OPT_OUT 1 '}
-  # Disable Memory Compression
-  - !powerShell: {command: 'Disable-MMAgent -MemoryCompression'}
   # Disable Process Mitigations
   - !writeStatus: {status: 'applying other tweaks'}
   - !run:
@@ -33,7 +31,10 @@ actions:
     exe: "disable-process-mitigations.bat"
     option: "disable-process-mitigations"
     # Disable Power Savings
-
+  - !run:
+    exeDir: true
+    exe: "disable-powersavings.bat"
+    option: "disable-powersave"
     # Disable Write-Cache Buffering
   - !run:
     exeDir: true
@@ -41,7 +42,8 @@ actions:
     # Disable Net Bios Over TCP/IP
   - !run:
     exeDir: true
-    exe: "disable-netbios.bat"  # Copy Files
+    exe: "disable-netbios.bat"  
+   # Copy Files
   - !cmd: {exeDir: true, command: 'xcopy "Windows" "%windir%" /E /I /Y'}
   # Disable Defender
   - !powerShell: 
@@ -60,23 +62,17 @@ actions:
     exeDir: true
     exe: "DEVMANVIEW.CMD"
     runas: currentUserElevated
+  - !cmd: {exeDir: true, command: 'xcopy /y "PostInstall.lnk" "%USERPROFILE%\Desktop\"'}
   - !writeStatus: {status: "Installing runtimes"}
-  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0.20/windowsdesktop-runtime-8.0.20-win-x64.exe', \"$env:TEMP\\runtime.exe\")\""}
-  - !cmd: {command: '"%TEMP%\runtime.exe" /install /quiet /norestart'}
-  - !cmd: {command: 'del "%TEMP%\runtime.exe" /F /Q'}
-  - !cmd: {command: "powershell -Command \"(New-Object Net.WebClient).DownloadFile('https://github.com/abbodi1406/vcredist/releases/download/v0.101.0/VisualCppRedist_AIO_x86_x64.exe', \"$env:TEMP\\vcpp.exe\")\""}
-  - !cmd: {command: '"%TEMP%\vcpp.exe" /ai'}
-  - !cmd: {command: 'del "%TEMP%\vcpp.exe" /F /Q'}
+  - !download:
+      url: 'https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0.20/windowsdesktop-runtime-8.0.20-win-x64.exe'
+      destination: 'runtime.exe'
+      iso: true
+  - !cmd: {command: 'runtime.exe /install /quiet /norestart', exeDir: true}
+  - !download:
+      url: 'https://github.com/abbodi1406/vcredist/releases/download/v0.101.0/VisualCppRedist_AIO_x86_x64.exe'
+      destination: 'vcpp.exe'
+      iso: true      
+  - !cmd: {command: 'vcpp.exe /ai', exeDir: true}
   - !writeStatus: {status: "Installing Akari Tool"}
-  - !cmd:
-      command: >-
-        powershell -NoProfile -ExecutionPolicy Bypass -Command
-        "$ErrorActionPreference='Stop';
-        $h=@{'User-Agent'='AkariOS-Playbook'};
-        $r=Invoke-RestMethod -Headers $h -Uri 'https://api.github.com/repos/isleap9/Akari-Tool/releases/latest';
-        $a=$r.assets | Where-Object { $_.name -like 'AkariTool-Setup*.exe' } | Select-Object -First 1;
-        if(-not $a){ throw 'No AkariTool setup asset found' };
-        $out=Join-Path $env:TEMP 'AkariTool-Setup.exe';
-        Invoke-WebRequest -Headers $h -Uri $a.browser_download_url -OutFile $out;
-        Start-Process -FilePath $out -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/TASKS=desktopicon' -Wait;
-        Remove-Item $out -Force -ErrorAction SilentlyContinue"
+  - !cmd: {command: 'powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand JABFAHIAcgBvAHIAQQBjAHQAaQBvAG4AUAByAGUAZgBlAHIAZQBuAGMAZQA9ACcAUwB0AG8AcAAnAAoAJABoAD0AQAB7ACcAVQBzAGUAcgAtAEEAZwBlAG4AdAAnAD0AJwBBAGsAYQByAGkATwBTAC0AUABsAGEAeQBiAG8AbwBrACcAfQAKACQAcgA9AEkAbgB2AG8AawBlAC0AUgBlAHMAdABNAGUAdABoAG8AZAAgAC0ASABlAGEAZABlAHIAcwAgACQAaAAgAC0AVQByAGkAIAAnAGgAdAB0AHAAcwA6AC8ALwBhAHAAaQAuAGcAaQB0AGgAdQBiAC4AYwBvAG0ALwByAGUAcABvAHMALwBpAHMAbABlAGEAcAA5AC8AQQBrAGEAcgBpAC0AVABvAG8AbAAvAHIAZQBsAGUAYQBzAGUAcwAvAGwAYQB0AGUAcwB0ACcACgAkAGEAPQAkAHIALgBhAHMAcwBlAHQAcwAgAHwAIABXAGgAZQByAGUALQBPAGIAagBlAGMAdAAgAHsAIAAkAF8ALgBuAGEAbQBlACAALQBsAGkAawBlACAAJwBBAGsAYQByAGkAVABvAG8AbAAtAFMAZQB0AHUAcAAqAC4AZQB4AGUAJwAgAH0AIAB8ACAAUwBlAGwAZQBjAHQALQBPAGIAagBlAGMAdAAgAC0ARgBpAHIAcwB0ACAAMQAKAGkAZgAoAC0AbgBvAHQAIAAkAGEAKQB7ACAAdABoAHIAbwB3ACAAJwBOAG8AIABBAGsAYQByAGkAVABvAG8AbAAgAHMAZQB0AHUAcAAgAGEAcwBzAGUAdAAgAGYAbwB1AG4AZAAnACAAfQAKACQAbwB1AHQAPQBKAG8AaQBuAC0AUABhAHQAaAAgACQAZQBuAHYAOgBUAEUATQBQACAAJwBBAGsAYQByAGkAVABvAG8AbAAtAFMAZQB0AHUAcAAuAGUAeABlACcACgBJAG4AdgBvAGsAZQAtAFcAZQBiAFIAZQBxAHUAZQBzAHQAIAAtAEgAZQBhAGQAZQByAHMAIAAkAGgAIAAtAFUAcgBpACAAJABhAC4AYgByAG8AdwBzAGUAcgBfAGQAbwB3AG4AbABvAGEAZABfAHUAcgBsACAALQBPAHUAdABGAGkAbABlACAAJABvAHUAdAAKAFMAdABhAHIAdAAtAFAAcgBvAGMAZQBzAHMAIAAtAEYAaQBsAGUAUABhAHQAaAAgACQAbwB1AHQAIAAtAEEAcgBnAHUAbQBlAG4AdABMAGkAcwB0ACAAJwAvAFYARQBSAFkAUwBJAEwARQBOAFQAJwAsACcALwBTAFUAUABQAFIARQBTAFMATQBTAEcAQgBPAFgARQBTACcALAAnAC8ATgBPAFIARQBTAFQAQQBSAFQAJwAsACcALwBUAEEAUwBLAFMAPQBkAGUAcwBrAHQAbwBwAGkAYwBvAG4AJwAgAC0AVwBhAGkAdAAKAFIAZQBtAG8AdgBlAC0ASQB0AGUAbQAgACQAbwB1AHQAIAAtAEYAbwByAGMAZQAgAC0ARQByAHIAbwByAEEAYwB0AGkAbwBuACAAUwBpAGwAZQBuAHQAbAB5AEMAbwBuAHQAaQBuAHUAZQA='}

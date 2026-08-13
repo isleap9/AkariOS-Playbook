@@ -12,8 +12,8 @@ if /I "%DEVICE_TYPE%"=="LAPTOP" (
     powercfg /setdcvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000
     cls
 ) else (
-    powercfg -import %SYSTEMROOT%\AkariOS.pow 8b1e6fbd-33a2-411c-9317-232e23154cf5
-    powercfg -setactive 8b1e6fbd-33a2-411c-9317-232e23154cf5
-    del %SYSTEMROOT%\AkariOS.pow
+    powercfg -import %SYSTEMROOT%\SapphireOS.pow 3669b9e3-17ce-4e11-9c13-6e9e0724b157
+    powercfg -setactive 3669b9e3-17ce-4e11-9c13-6e9e0724b157
+	del %SYSTEMROOT%\SapphireOS.pow
     cls
 )

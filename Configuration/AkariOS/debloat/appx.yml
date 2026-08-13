@@ -76,6 +76,17 @@ actions:
   - !appx: {name: '*Microsoft.YourPhone*', type: family}
   - !appx: {name: '*MicrosoftWindows.CrossDevice*', type: family}
   - !appx: {name: '*Microsoft.Windows.Ai.Copilot*', type: family}
+  - !appx: {name: '*Microsoft.Copilot*', type: family}
+  - !powerShell: 
+    command: '.\Copilot.ps1'
+    exeDir: true
+    runas: currentUserElevated
+    errorAction: Ignore
+  - !powerShell: 
+    command: '.\StartMenuCache.ps1'
+    exeDir: true
+    runas: currentUserElevated
+    errorAction: Ignore
   - !appx: {name: '*MicrosoftWindows.Client.AIX*', type: family, weight: 10}
   - !writeStatus: {status: "Removing Windows Backup"}
   - !appx: {name: '*WindowsBackup*', type: app, unregister: true, weight: 10}

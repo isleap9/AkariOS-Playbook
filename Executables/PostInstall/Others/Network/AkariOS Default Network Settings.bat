@@ -1,6 +1,6 @@
 @echo off
 Echo "Reverting Network Tweaks"
-:: using minsudo because of AkariTool
+:: using minsudo because of SapphireTool
 C:\PostInstall\Tweaks\MinSudo.exe --NoLogo --TrustedInstaller --Privileged cmd /c "netsh int tcp set global dca=enabled"
 C:\PostInstall\Tweaks\MinSudo.exe --NoLogo --TrustedInstaller --Privileged cmd /c "netsh int tcp set global netdma=enabled"
 C:\PostInstall\Tweaks\MinSudo.exe --NoLogo --TrustedInstaller --Privileged cmd /c "netsh interface isatap set state disabled"
