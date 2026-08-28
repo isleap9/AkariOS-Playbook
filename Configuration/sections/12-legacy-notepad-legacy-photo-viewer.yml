@@ -1,0 +1,19 @@
+  # SECTION 12 - LEGACY NOTEPAD  +  LEGACY PHOTO VIEWER (toggle: remove-uwp-photos)
+  # ==========================================================================
+  - !status: {status: 'Restoring legacy Notepad'}
+  - !registryKey: {path: 'HKCR\*\OpenWithList\notepad.exe', operation: 'add'}
+  - !registryValue: {path: 'HKCR\Applications\notepad.exe', value: 'NoOpenWith', operation: 'delete'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Notepad', value: 'ShowStoreBanner', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCR\.txt\ShellNew', value: 'ItemName', type: REG_EXPAND_SZ, data: '@%SystemRoot%\System32\notepad.exe,-470'}
+  - !registryValue: {path: 'HKCR\.txt\ShellNew', value: 'NullFile', type: REG_SZ, data: ''}
+  # Legacy Photo Viewer (UWP Photos kept — useful default app)
+  # Only enable Legacy Photo Viewer associations if user opted to remove UWP Photos
+  - !registryValue: {path: 'HKCR\.jpg\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.jpeg\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.png\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.bmp\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.gif\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.tif\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.tiff\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+
+  # ==========================================================================

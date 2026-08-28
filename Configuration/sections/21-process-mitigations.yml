@@ -1,0 +1,10 @@
+  # SECTION 21 - PROCESS MITIGATIONS  (toggle: disable-process-mitigations)
+  #   Self-contained registry method (WinSux-style MitigationOptions binary),
+  #   no external .bat required.
+  # ==========================================================================
+  - !status: {status: 'Disabling Process Mitigations', option: 'disable-process-mitigations'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel', value: 'MitigationOptions', type: REG_BINARY, data: '222222000002000000020000000000000000000000000000', option: 'disable-process-mitigations'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'MoveImages', type: REG_DWORD, data: '0', option: 'disable-process-mitigations'}
+  - !powerShell: {command: 'Set-ProcessMitigation -System -Disable CFG,DEP,ForceRelocateImages,BottomUp,HighEntropy,SEHOP,TerminateOnError -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true, option: 'disable-process-mitigations'}
+
+  # ==========================================================================

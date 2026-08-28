@@ -1,0 +1,7 @@
+  # SECTION 35 - FILE ASSOCIATIONS
+  #   Uses bundled SetFileTypeAssociation.ps1 (SFTA) from Executables\.
+  # ==========================================================================
+  - !status: {status: 'Setting file associations'}
+  - !powerShell: {command: '.\SetFileTypeAssociation.ps1', exeDir: true, wait: true, runas: currentuser}
+
+  # ==========================================================================

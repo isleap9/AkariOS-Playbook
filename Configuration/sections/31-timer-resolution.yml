@@ -1,0 +1,10 @@
+  # SECTION 31 - TIMER RESOLUTION  (WinSux "STR" service)
+  #   Requires settimerresolutionservice.cs in Executables\ (copied to system by
+  #   Section 01 robocopy, or referenced via exeDir). Compiled with in-box csc.
+  # ==========================================================================
+  - !status: {status: 'Installing Timer Resolution Service'}
+  - !cmd: {exeDir: true, command: '"%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:"%SystemRoot%\SetTimerResolutionService.exe" /r:System.ServiceProcess.dll /r:System.Configuration.Install.dll /r:System.Management.dll "settimerresolutionservice.cs" >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !powerShell: {command: 'if (Get-Service -Name ''STR'' -EA 0) { sc.exe delete ''STR'' | Out-Null; Start-Sleep 2 }; New-Service -Name ''STR'' -DisplayName ''Set Timer Resolution Service'' -BinaryPathName ($env:SystemRoot + ''\SetTimerResolutionService.exe'') -StartupType Automatic -EA 0 | Out-Null; Start-Service -Name ''STR'' -EA 0', runas: currentUserElevated, wait: true}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel', value: 'GlobalTimerResolutionRequests', type: REG_DWORD, data: '1'}
+
+  # ==========================================================================

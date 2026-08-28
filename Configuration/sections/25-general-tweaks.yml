@@ -1,0 +1,58 @@
+  # SECTION 25 - GENERAL TWEAKS  (always on)
+  # ==========================================================================
+  - !status: {status: 'Applying general tweaks'}
+  # Svchost split threshold (Vain universal 0xFFFFFFFF -> always group services,
+  # lower RAM/process overhead; replaces V5 svchost.ps1)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control', value: 'SvcHostSplitThresholdInKB', type: REG_DWORD, data: '4294967295'}
+  # Disable BitLocker on encrypted volumes (Ultimate logic, no menu/pause).
+  # Only touches volumes still protected/encrypting; BDESVC is disabled in Section 17.
+  - !powerShell: {command: 'try { Get-BitLockerVolume | Where-Object { $_.ProtectionStatus -eq ''On'' -or $_.VolumeStatus -ne ''FullyDecrypted'' } | ForEach-Object { Disable-BitLocker -MountPoint $_.MountPoint -ErrorAction SilentlyContinue | Out-Null } } catch { }', runas: currentUserElevated, wait: true}
+  # Fault Tolerant Heap
+  - !powerShell: {command: 'Set-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\FTH'' -Name ''Enabled'' -Value 0 -Type DWORD -ErrorAction SilentlyContinue', wait: true}
+  # Game DVR / Game Bar
+  - !registryValue: {path: 'HKCU\System\GameConfigStore', value: 'GameDVR_Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\System\GameConfigStore', value: 'GameDVR_HonorUserFSEBehaviorMode', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR', value: 'AppCaptureEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR', value: 'AllowGameDVR', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\GameBar', value: 'ShowStartupPanel', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\GameBar', value: 'UseNexusForGameBarEnabled', type: REG_DWORD, data: '0'}
+  # Game Mode ON (lets Windows prioritise the foreground game thread for CPU/GPU resources)
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\GameBar', value: 'AutoGameModeEnabled', type: REG_DWORD, data: '1'}
+  # Mobility sync center
+  - !run: {exe: 'taskkill', args: '/im mobsync.exe /f'}
+  # Explorer UI defaults
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'HideFileExt', type: REG_DWORD, data: '0'}     # show extensions
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'LaunchTo', type: REG_DWORD, data: '1'}         # open to This PC
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'ShowSyncProviderNotifications', type: REG_DWORD, data: '0'}
+  - !powerShell: {command: 'Disable-MMAgent -MemoryCompression -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true, option: 'disable-memory-compression'}
+  # Prevent Windows Update from auto-downloading drivers (WinSux)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching', value: 'SearchOrderConfig', type: REG_DWORD, data: '0'}
+  # Service kill timeout - 2 s instead of default 5 s (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control', value: 'WaitToKillServiceTimeout', type: REG_SZ, data: '2000'}
+  # Keep kernel code/data in RAM, not paged to disk (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'DisablePagingExecutive', type: REG_DWORD, data: '1'}
+  # Foreground thread boost: short quantums, variable, max 3:1 foreground ratio (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl', value: 'Win32PrioritySeparation', type: REG_DWORD, data: '26'}
+  # MMCSS: 0% reserved for background — all CPU available to games (gaming-focused)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile', value: 'SystemResponsiveness', type: REG_DWORD, data: '0'}
+  # Disable Windows network throttling (prevents packet rate limiting during gameplay)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile', value: 'NetworkThrottlingIndex', type: REG_DWORD, data: 'ffffffff'}
+  # Disable audio ducking when communication apps are active (FSOS)
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Multimedia\Audio', value: 'UserDuckingPreference', type: REG_DWORD, data: '3'}
+  - !registryValue: {path: 'HKU\.DEFAULT\Software\Microsoft\Multimedia\Audio', value: 'UserDuckingPreference', type: REG_DWORD, data: '3'}
+  # Suppress the first-logon animation (FSOS)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'EnableFirstLogonAnimation', type: REG_DWORD, data: '0'}
+  # MMCSS Games task tuning (elevated scheduling priority for game threads)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'Priority', type: REG_DWORD, data: '6'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'GPU Priority', type: REG_DWORD, data: '8'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'Scheduling Category', type: REG_SZ, data: 'High'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'SFIO Priority', type: REG_SZ, data: 'High'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'Background Only', type: REG_SZ, data: 'False'}
+  # Service pipe connection timeout - 30 s (explicit, prevents hanging on slow services)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control', value: 'ServicesPipeTimeout', type: REG_DWORD, data: '30000'}
+  # Hardware-Accelerated GPU Scheduling (HAGS) - requires WDDM 2.7+ driver (Nvidia 451.48+, AMD 20.5.1+)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers', value: 'HwSchMode', type: REG_DWORD, data: '2'}
+  # DirectX flip model upgrade + VRR optimization (global user preference)
+  - !registryValue: {path: 'HKCU\Software\Microsoft\DirectX\UserGpuPreferences', value: 'DirectXUserGlobalSettings', type: REG_SZ, data: 'SwapEffectUpgradeEnable=1;VRROptimizeEnable=0;'}
+
+  # ==========================================================================

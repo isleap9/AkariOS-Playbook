@@ -1,0 +1,8 @@
+  # SECTION 22 - SPECTRE / MELTDOWN  (toggle: disable-spectre-meltdown)
+  # ==========================================================================
+  - !status: {status: 'Disabling Spectre & Meltdown Mitigations', option: 'disable-spectre-meltdown'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'FeatureSettingsOverride', type: REG_DWORD, data: '3', option: 'disable-spectre-meltdown'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'FeatureSettingsOverrideMask', type: REG_DWORD, data: '3', option: 'disable-spectre-meltdown'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'FeatureSettings', type: REG_DWORD, data: '1', option: 'disable-spectre-meltdown'}
+
+  # ==========================================================================

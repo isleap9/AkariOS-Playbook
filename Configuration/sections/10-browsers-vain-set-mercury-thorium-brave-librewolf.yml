@@ -1,0 +1,30 @@
+  # SECTION 10 - BROWSERS  (Vain set: Mercury, Thorium, Brave, LibreWolf,
+  #   Firefox, Chrome + Edge). Picker is the 2-page RadioImagePage in
+  #   playbook.conf. Edge (browser-edge) installs nothing - it just marks Edge
+  #   to be KEPT; Section 15 removes Edge via !browser-edge otherwise.
+  #   Taskbar-pin binaries omitted (fragile per-user blobs) - installs only.
+  # ==========================================================================
+  - !status: {status: 'Installing Mercury', option: 'browser-mercury'}
+  - !download: {git: 'https://github.com/Alex313031/Mercury', regex: '^mercury.*win64.*AVX2.*.exe$', destination: '%temp%\Mercury.exe', overwrite: true, option: 'browser-mercury'}
+  - !cmd: {command: '"%temp%\Mercury.exe" /S', runas: currentUserElevated, option: 'browser-mercury'}
+
+  - !status: {status: 'Installing Thorium', option: 'browser-thorium'}
+  - !download: {git: 'https://github.com/Alex313031/Thorium-Win', regex: '^thorium_AVX2_mini_installer\.exe$', destination: '%temp%\Thorium.exe', overwrite: true, option: 'browser-thorium'}
+  - !cmd: {command: '"%temp%\Thorium.exe" --silent --system-level --do-not-launch-chrome', runas: currentUserElevated, option: 'browser-thorium'}
+
+  - !status: {status: 'Installing Brave', option: 'browser-brave'}
+  - !download: {url: 'https://laptop-updates.brave.com/latest/winx64', destination: '%temp%\Brave.exe', overwrite: true, option: 'browser-brave'}
+  - !cmd: {command: '"%temp%\Brave.exe" /silent /install', runas: currentUserElevated, option: 'browser-brave'}
+
+  - !status: {status: 'Installing LibreWolf', option: 'browser-librewolf'}
+  - !run: {exe: 'winget', args: 'install -e --id LibreWolf.LibreWolf --silent --accept-package-agreements --accept-source-agreements', runas: currentUserElevated, option: 'browser-librewolf'}
+
+  - !status: {status: 'Installing Firefox', option: 'browser-firefox'}
+  - !download: {url: 'https://download.mozilla.org/?product=firefox-latest&os=win64&lang=en-US', destination: '%temp%\Firefox.exe', overwrite: true, option: 'browser-firefox'}
+  - !cmd: {command: '"%temp%\Firefox.exe" /S', runas: currentUserElevated, option: 'browser-firefox'}
+
+  - !status: {status: 'Installing Chrome', option: 'browser-chrome'}
+  - !download: {url: 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi', destination: '%temp%\Chrome.msi', overwrite: true, option: 'browser-chrome'}
+  - !cmd: {command: '"%temp%\Chrome.msi" /quiet /norestart', runas: currentUserElevated, option: 'browser-chrome'}
+
+  # ==========================================================================

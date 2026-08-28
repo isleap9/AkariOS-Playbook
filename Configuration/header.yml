@@ -1,0 +1,33 @@
+---
+# ============================================================================
+#  AkariOS V6 - custom.yml
+#  Monolithic AME playbook (structure based on Vain, logic ported from AkariV5)
+#
+#  Design decisions (see project spec):
+#   1. Defender      : AkariV5 method - DISABLE (restorable via EnableDefender.ps1)
+#   2. Performance   : Vain tweaks + NIC only (NO Vain Governor app/rules/toolbox)
+#                      Power plan + timer resolution from WinSux
+#   3. GPU           : post-install scripts only (DDU + nvidiaProfileInspector)
+#   4. Safety net    : System Restore ON + WinRE ON  (no 'vssadmin delete shadows',
+#                      no 'recoveryenabled no'; create a restore point at the end)
+#   5. Apps          : Vain UI layer + browsers
+#   6. Start/UI      : Vain start menu + UI, NO OpenShell
+#   7. Updates       : PAUSE only (WinSux 365-day method), not disabled
+#   8. Engine        : UseKernelDriver=false, TrustedInstaller level
+#
+#  Feature toggles (must match playbook.conf <Name> values):
+#   disable-defender, disable-uac, disable-process-mitigations,
+#   disable-spectre-meltdown, enable-dark-mode,
+#   legacy-context-menu, remove-uwp-photos, disable-print, disable-bluetooth,
+#   disable-wu, disable-powersave, remove-onedrive,
+#   disable-hyperv, 7zip
+#   Browser picker: browser-mercury/thorium/brave/librewolf/firefox/chrome/edge
+#   Edge is removed via !browser-edge (i.e. unless the user picks Edge)
+#   NOTE: 'akariserv' dropped entirely - remove it from playbook.conf too
+#
+#  Build progress:  [x] ALL 40 sections drafted (init -> end)
+#  Pending: Executables\ pass. playbook.conf DONE (2-page browser picker with
+#           Edge; Edge removed via !browser-edge; VPN + akariserv dropped).
+# ============================================================================
+
+actions:

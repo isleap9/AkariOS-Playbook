@@ -1,0 +1,15 @@
+  # SECTION 29 - NIC / NETWORK TWEAKS  (Vain-only)
+  #   IPv6 is intentionally PRESERVED (unlike WinSux). Per-adapter loop over the
+  #   net class GUID: disable power-saving/EEE/wake, add PnPCapabilities=24,
+  #   keep checksum/LSO/RSC offloads enabled.
+  # ==========================================================================
+  - !status: {status: 'Configuring NIC'}
+  - !powerShell: {command: 'Get-ChildItem ''HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}'' -EA 0 | Where-Object {$_.PSChildName -match ''^\d{4}$''} | ForEach-Object { $p=$_.PSPath; Set-ItemProperty -Path $p -Name ''PnPCapabilities'' -Value 24 -Type DWord -Force -EA 0; foreach($n in @(''*EEE'',''EEELinkAdvertisement'',''AdvancedEEE'',''GigaLite'',''ULPMode'',''SipsEnabled'',''EnableGreenEthernet'',''PowerSavingMode'',''*WakeOnMagicPacket'',''*WakeOnPattern'',''*ModernStandbyWoLMagicPacket'',''WakeOnLink'',''S5WakeOnLan'',''*FlowControl'',''*InterruptModeration'',''*RSS'',''EnablePME'',''*SelectiveSuspend'')){ if(Get-ItemProperty -Path $p -Name $n -EA 0){ Set-ItemProperty -Path $p -Name $n -Value ''0'' -Force -EA 0 } }; foreach($n in @(''*TCPChecksumOffloadIPv4'',''*TCPChecksumOffloadIPv6'',''*UDPChecksumOffloadIPv4'',''*UDPChecksumOffloadIPv6'',''*IPChecksumOffloadIPv4'')){ if(Get-ItemProperty -Path $p -Name $n -EA 0){ Set-ItemProperty -Path $p -Name $n -Value ''3'' -Force -EA 0 } }; foreach($n in @(''*LsoV2IPv4'',''*LsoV2IPv6'',''*RscIPv4'',''*RscIPv6'')){ if(Get-ItemProperty -Path $p -Name $n -EA 0){ Set-ItemProperty -Path $p -Name $n -Value ''1'' -Force -EA 0 } } }', runas: currentUserElevated, wait: true}
+  # Trim non-essential bindings (IPv6 / ms_tcpip6 kept)
+  - !powerShell: {command: 'Disable-NetAdapterBinding -Name ''*'' -ComponentID ms_lldp,ms_lltdio,ms_implat,ms_rspndr -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true}
+  # Global TCP/UDP tuning
+  - !cmd: {command: 'netsh int tcp set global timestamps=disabled >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'netsh int udp set global uro=enabled >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !powerShell: {command: 'Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing Enable -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true}
+
+  # ==========================================================================

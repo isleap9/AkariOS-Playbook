@@ -1,0 +1,8 @@
+  # SECTION 38 - REBUILD PERF COUNTERS
+  # ==========================================================================
+  - !status: {status: 'Rebuilding Perf Counters'}
+  - !run: {exe: 'lodctr', args: '/r'}
+  - !run: {exe: 'lodctr', args: '/r'}
+  - !run: {exe: 'winmgmt', args: '/resyncperf'}
+
+  # ==========================================================================

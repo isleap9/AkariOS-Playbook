@@ -1,0 +1,49 @@
+  # SECTION 08 - SOFTWARE / RUNTIMES  (VC++ redists + DirectX)
+  # ==========================================================================
+  - !status: {status: 'Installing VC Redist 2005'}
+  - !download: {url: 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x86.EXE', destination: '%temp%\2005_86.exe', overwrite: true}
+  - !download: {url: 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x64.EXE', destination: '%temp%\2005_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2005_86.exe" /Q /C /T:%temp%\2005_86', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2005_64.exe" /Q /C /T:%temp%\2005_64', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2005_86\vcredist.msi" /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2005_64\vcredist.msi" /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !file: {path: '%temp%\2005_86'}
+  - !file: {path: '%temp%\2005_64'}
+
+  - !status: {status: 'Installing VC Redist 2008'}
+  - !download: {url: 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe', destination: '%temp%\2008_86.exe', overwrite: true}
+  - !download: {url: 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe', destination: '%temp%\2008_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2008_86.exe" /q', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2008_64.exe" /q', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing VC Redist 2010'}
+  - !download: {url: 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe', destination: '%temp%\2010_86.exe', overwrite: true}
+  - !download: {url: 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe', destination: '%temp%\2010_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2010_86.exe" /q', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2010_64.exe" /q', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing VC Redist 2012'}
+  - !download: {url: 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe', destination: '%temp%\2012_86.exe', overwrite: true}
+  - !download: {url: 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe', destination: '%temp%\2012_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2012_86.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2012_64.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing VC Redist 2013'}
+  - !download: {url: 'https://aka.ms/highdpimfc2013x86enu', destination: '%temp%\2013_86.exe', overwrite: true}
+  - !download: {url: 'https://aka.ms/highdpimfc2013x64enu', destination: '%temp%\2013_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2013_86.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2013_64.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing VC Redist 2015-2022'}
+  - !download: {url: 'https://aka.ms/vs/17/release/vc_redist.x86.exe', destination: '%temp%\2015_2022_86.exe', overwrite: true}
+  - !download: {url: 'https://aka.ms/vs/17/release/vc_redist.x64.exe', destination: '%temp%\2015_2022_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2015_2022_86.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2015_2022_64.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing DirectX'}
+  - !download: {url: 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe', destination: '%temp%\DirectX.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\DirectX.exe" /Q /C /T:%temp%\DirectX', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\DirectX\DXSETUP.exe" /silent', runas: currentUserElevated, wait: true}
+  - !file: {path: '%temp%\DirectX'}
+
+  # ==========================================================================

@@ -1,0 +1,89 @@
+  # SECTION 17 - SERVICES  (general + telemetry)
+  #   SAFETY-NET AUDIT: VSS, swprv, volsnap, sdrsvc, wbengine and the
+  #   SystemRestore service are intentionally NOT disabled here, so that
+  #   System Restore keeps working (see Section 37). Only vmicvss (Hyper-V
+  #   guest VSS) is touched, and only in the Hyper-V section.
+  #   Printing services -> Section 18 ; power-saving services -> Section 33.
+  # ==========================================================================
+  - !status: {status: 'Configuring Services'}
+  # General
+  - !service: {name: 'BDESVC', operation: change, startup: 4}            # BitLocker
+  - !service: {name: 'CldFlt', operation: change, startup: 4}            # Cloud Files Filter
+  - !service: {name: 'UCPD', operation: change, startup: 4}              # User Choice Protection Driver
+  - !service: {name: 'onesyncsvc', operation: change, startup: 4}        # Sync Host
+  - !service: {name: 'ShellHWDetection', operation: change, startup: 4}
+  - !service: {name: 'sysmain', operation: change, startup: 4}
+  - !service: {name: 'themes', operation: change, startup: 4}
+  - !service: {name: 'Beep', operation: change, startup: 4}
+  - !service: {name: 'CloudIdSvc', operation: change, startup: 4}
+  - !service: {name: 'WPCMonSvc', operation: change, startup: 4}         # Parental Controls
+  - !service: {name: 'MapsBroker', operation: change, startup: 4}
+  - !service: {name: 'CloudBackupRestoreSvc', operation: change, startup: 4}
+  - !service: {name: 'fhsvc', operation: change, startup: 4}             # File History (NOT System Restore)
+  - !service: {name: 'semgrsvc', operation: change, startup: 4}          # Payments / NFC
+  - !service: {name: 'wisvc', operation: change, startup: 4}             # Windows Insider
+  # Telemetry / Reporting
+  - !service: {name: 'Telemetry', operation: change, startup: 4}
+  - !service: {name: 'WdiSystemHost', operation: change, startup: 4}
+  - !service: {name: 'WdiServiceHost', operation: change, startup: 4}
+  - !service: {name: 'troubleshootingsvc', operation: change, startup: 4}
+  - !service: {name: 'diagnosticshub.standardcollector.service', operation: change, startup: 4}
+  - !service: {name: 'diagsvc', operation: change, startup: 4}
+  - !service: {name: 'intelpmt', operation: change, startup: 4}
+  - !service: {name: 'pla', operation: change, startup: 4}
+  - !service: {name: 'WerSvc', operation: change, startup: 4}
+  - !service: {name: 'svsvc', operation: change, startup: 4}
+  - !service: {name: 'diagtrack', operation: change, startup: 4}         # DiagTrack (telemetry)
+  - !service: {name: 'wercplsupport', operation: change, startup: 4}
+  - !service: {name: 'Wecsvc', operation: change, startup: 4}
+  - !service: {name: 'dps', operation: change, startup: 4}
+  - !service: {name: 'pcasvc', operation: change, startup: 4}
+  - !service: {name: 'dusmsvc', operation: change, startup: 4}
+  - !service: {name: 'ndu', operation: change, startup: 4}
+  - !service: {name: 'DSSvc', operation: change, startup: 4}             # Data Sharing (NOT restore)
+  # Additional services (FSOS phase3)
+  - !service: {name: 'dmwappushservice', operation: change, startup: 4}    # WAP push (telemetry relay)
+  - !service: {name: 'CDPUserSvc', operation: change, startup: 4}          # Connected Devices Platform
+  - !service: {name: 'lmhosts', operation: change, startup: 4}             # NetBIOS name resolution
+  - !service: {name: 'TrkWks', operation: change, startup: 4}              # Distributed Link Tracking
+  - !service: {name: 'RetailDemo', operation: change, startup: 4}
+  - !service: {name: 'WMPNetworkSvc', operation: change, startup: 4}       # WMP Network Sharing
+  - !service: {name: 'DialogBlockingService', operation: change, startup: 4}
+  - !service: {name: 'AssignedAccessManagerSvc', operation: change, startup: 4}
+  - !service: {name: 'AppVClient', operation: change, startup: 4}          # App Virtualization
+  - !service: {name: 'DevQueryBroker', operation: change, startup: 4}
+  - !service: {name: 'WSAIFabricSvc', operation: change, startup: 4}       # AI Fabric
+  - !service: {name: 'PimIndexMaintenanceSvc', operation: change, startup: 4}
+  - !service: {name: 'shpamsvc', operation: change, startup: 4}            # Shared PC Account Mgr
+  - !service: {name: 'SgrmBroker', operation: change, startup: 4, option: 'disable-defender'}   # System Guard Runtime
+  - !service: {name: 'SgrmAgent', operation: change, startup: 4, option: 'disable-defender'}
+  - !service: {name: 'uhssvc', operation: change, startup: 4}              # Update Health Tools
+  - !service: {name: 'whesvc', operation: change, startup: 4}              # Windows Hardware Error
+  - !service: {name: 'Fax', operation: change, startup: 4}
+  - !service: {name: 'RemoteRegistry', operation: change, startup: 4}
+  - !service: {name: 'RemoteAccess', operation: change, startup: 4}
+  - !service: {name: 'MessagingService', operation: change, startup: 4}
+  - !service: {name: 'EFS', operation: change, startup: 4}                 # Encrypting File System
+  - !service: {name: 'CscService', operation: change, startup: 4}          # Offline Files
+  - !service: {name: 'fdc', operation: change, startup: 4}                 # Function Discovery Resource
+  - !service: {name: 'flpydisk', operation: change, startup: 4}
+  - !service: {name: 'sfloppy', operation: change, startup: 4}
+  - !service: {name: 'serial', operation: change, startup: 4}
+  - !service: {name: 'serenum', operation: change, startup: 4}
+  - !service: {name: 'sermouse', operation: change, startup: 4}
+  - !service: {name: 'ErrDev', operation: change, startup: 4}
+  - !service: {name: 'CompositeBus', operation: change, startup: 4}
+  - !service: {name: 'SCardSvr', operation: change, startup: 4}            # Smart Card
+  - !service: {name: 'ScDeviceEnum', operation: change, startup: 4}        # Smart Card Device Enum
+  - !service: {name: 'GpuEnergyDrv', operation: change, startup: 4, option: 'disable-powersave'}
+  - !service: {name: 'ose', operation: change, startup: 4}              # Office Source Engine
+  - !service: {name: 'osppsvc', operation: change, startup: 4}          # Office Software Protection Platform
+  - !service: {name: 'ClickToRunSvc', operation: change, startup: 4}    # Office Click-to-Run
+  # Restore networking-critical services to automatic start after mass disable (FSOS safety-net)
+  - !powerShell: {command: 'foreach ($kv in @{iphlpsvc=2;tcpipreg=2;Dnscache=2;NlaSvc=2;netprofm=2}.GetEnumerator()) { $k = ''HKLM:\SYSTEM\CurrentControlSet\Services\'' + $kv.Key; if (Test-Path $k) { try { Set-ItemProperty $k ''Start'' $kv.Value DWord -Force -EA 0 } catch {} } }', runas: currentUserElevated, wait: true}
+  # Fix "Not connected" cosmetic bug — create key first (may not exist), then enable NCSI probing, restart services
+  - !registryKey: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\NlaSvc\Parameters\Internet', operation: add}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\NlaSvc\Parameters\Internet', value: 'EnableActiveProbing', type: REG_DWORD, data: '1'}
+  - !powerShell: {command: 'Restart-Service netprofm -Force -EA 0; Restart-Service NlaSvc -Force -EA 0', runas: currentUserElevated, wait: true}
+
+  # ==========================================================================

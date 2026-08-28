@@ -1,0 +1,16 @@
+  # SECTION 14 - ONEDRIVE  (toggle: remove-onedrive)
+  # ==========================================================================
+  - !status: {status: 'Removing OneDrive', option: 'remove-onedrive'}
+  - !taskKill: {name: 'OneDrive*', ignoreErrors: true, option: 'remove-onedrive'}
+  - !cmd: {command: 'OneDriveSetup /uninstall', runas: currentUserElevated, wait: true, option: 'remove-onedrive'}
+  - !service: {name: 'OneSyncSvc*', operation: delete, option: 'remove-onedrive'}
+  - !file: {path: '%ProgramData%\Microsoft OneDrive', option: 'remove-onedrive'}
+  - !file: {path: '%UserProfile%\OneDrive', option: 'remove-onedrive'}
+  - !file: {path: '%LocalAppdata%\Microsoft\OneDrive', option: 'remove-onedrive'}
+  - !file: {path: '%SystemRoot%\System32\OneDriveSetup.exe', option: 'remove-onedrive'}
+  - !file: {path: '%SystemRoot%\SysWOW64\OneDriveSetup.exe', option: 'remove-onedrive'}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\OneDrive', option: 'remove-onedrive'}
+  - !registryValue: {path: 'HKCU\Environment', value: 'OneDrive', operation: 'delete', option: 'remove-onedrive'}
+  - !powerShell: {command: "Get-ScheduledTask | Where-Object { $_.TaskName -like '*Oned*' } | ForEach-Object { Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false }", runas: currentUserElevated, wait: true, option: 'remove-onedrive'}
+
+  # ==========================================================================

@@ -1,0 +1,216 @@
+  # SECTION 26 - CONTROL PANEL SETTINGS
+  #   All tweaks from ControlPanelSettings.reg are now inlined as
+  #   !registryValue directives. The .reg file remains in Executables\ but
+  #   is no longer imported (dead reference, kept for reference only).
+  #   Extra runtime steps follow the registry block:
+  #     • CapabilityConsentStorage.db wipe (forces privacy Deny grants)
+  #     • ScheduledDefrag task disable
+  #     • powercfg lock-on-idle off
+  #     • Dynamic CloudStore GUID patching for priority-notifications
+  #   Skipped from .reg (handled elsewhere or intentional omission):
+  #     • Camera/Mic Allow  → FSOS bulk-deny PS block (Section 23) sets Deny
+  #     • AutoGameModeEnabled 1 → set at Section 25 line (Game Mode ON)
+  #     • DPI forcing (LogPixels/Win8DpiScaling) → user-hardware decision
+  #     • Sound scheme / AppEvents → user audio preference
+  #     • CloudStore binary blobs → dynamic PS block handles at runtime
+  #     • FeatureManagement Overrides → deferred
+  #     • Snap Assist / Wallpaper / Lockscreen → AkariOS handles separately
+  #     • Capability ConsentStore Deny (all) → Section 23 bulk-deny PS block
+  # ==========================================================================
+  - !status: {status: 'Applying Control Panel Settings'}
+  # -- EASE OF ACCESS: Narrator --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'DuckAudio', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'WinEnterLaunchEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'ScriptingEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'OnlineServicesEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'EchoToggleKeys', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator', value: 'NarratorCursorHighlight', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator', value: 'CoupleNarratorCursorKeyboard', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Narrator\NarratorHome', value: 'MinimizeType', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Narrator\NarratorHome', value: 'AutoStart', type: REG_DWORD, data: '0'}
+  # -- EASE OF ACCESS: Accessibility flags --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Ease of Access', value: 'selfvoice', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Ease of Access', value: 'selfscan', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility', value: 'Sound on Activation', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility', value: 'Warning Sounds', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\HighContrast', value: 'Flags', type: REG_SZ, data: '4194'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\Keyboard Response', value: 'Flags', type: REG_SZ, data: '2'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\Keyboard Response', value: 'AutoRepeatRate', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\Keyboard Response', value: 'AutoRepeatDelay', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\MouseKeys', value: 'Flags', type: REG_SZ, data: '130'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\MouseKeys', value: 'MaximumSpeed', type: REG_SZ, data: '39'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\MouseKeys', value: 'TimeToMaximumSpeed', type: REG_SZ, data: '3000'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\StickyKeys', value: 'Flags', type: REG_SZ, data: '2'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\ToggleKeys', value: 'Flags', type: REG_SZ, data: '34'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SoundSentry', value: 'Flags', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SoundSentry', value: 'FSTextEffect', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SoundSentry', value: 'TextEffect', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SoundSentry', value: 'WindowsEffect', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SlateLaunch', value: 'ATapp', type: REG_SZ, data: ''}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SlateLaunch', value: 'LaunchAT', type: REG_DWORD, data: '0'}
+  # -- CLOCK & REGION --
+  - !registryValue: {path: 'HKCU\Control Panel\TimeDate', value: 'DstNotification', type: REG_DWORD, data: '0'}
+  # -- EXPLORER UI (supplements Section 25 defaults) --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer', value: 'ShowFrequent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer', value: 'ShowCloudFilesInQuickAccess', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'FolderContentsInfoTip', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'ShowInfoTip', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState', value: 'FullPath', type: REG_DWORD, data: '1'}
+  # -- TROUBLESHOOTING: disable automatic maintenance wake --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance', value: 'MaintenanceDisabled', type: REG_DWORD, data: '1'}
+  # -- SECURITY & MAINTENANCE: suppress WER --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting', value: 'Disabled', type: REG_DWORD, data: '1'}
+  # -- PRIVACY: tailored experiences CPSS store path --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\TailoredExperiencesWithDiagnosticDataEnabled', value: 'Value', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\UserLocationOverridePrivacySetting', value: 'Value', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location', value: 'ShowGlobalPrompts', type: REG_DWORD, data: '0'}
+  # -- ACCOUNTS --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows NT\CurrentVersion\Winlogon', value: 'EnableGoodbye', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'DisableAutomaticRestartSignOn', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\Software\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device', value: 'DevicePasswordLessUpdateType', type: REG_DWORD, data: '1'}
+  # -- WINDOWS BACKUP: disable all sync categories --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableAccessibilitySettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableAccessibilitySettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableAppSyncSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableAppSyncSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableApplicationSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableApplicationSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableCredentialsSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableCredentialsSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableDesktopThemeSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableDesktopThemeSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableLanguageSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableLanguageSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisablePersonalizationSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisablePersonalizationSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableStartLayoutSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableStartLayoutSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableSyncOnPaidNetwork', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableWebBrowserSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableWebBrowserSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableWindowsSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableWindowsSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'EnableWindowsBackup', type: REG_DWORD, data: '0'}
+  # -- APPS --
+  - !registryValue: {path: 'HKLM\SYSTEM\Maps', value: 'AutoUpdateEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Appx', value: 'AllowAutomaticAppArchiving', type: REG_DWORD, data: '0'}
+  # -- PERSONALIZATION & TASKBAR --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarAl', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarSd', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarMn', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'ShowTaskViewButton', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'ShowCopilotButton', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarSn', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'IsEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'IconSizePreference', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer', value: 'HideSCAMeetNow', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Dsh', value: 'AllowNewsAndInterests', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds', value: 'EnableFeeds', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer', value: 'EnableAutoTray', type: REG_DWORD, data: '0'}
+  # -- START MENU --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Start', value: 'HideRecommendedSection', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Education', value: 'IsEducationEnvironment', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer', value: 'HideRecommendedSection', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer', value: 'HideRecentlyAddedApps', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'Start_Layout', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'Start_RecoPersonalizedSites', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'Start_TrackDocs', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Start', value: 'ShowRecentList', type: REG_DWORD, data: '0'}
+  # -- DISABLE APP LAUNCH TRACKING (EdgeUI MFU) --
+  - !registryValue: {path: 'HKCU\Software\Policies\Microsoft\Windows\EdgeUI', value: 'DisableMFUTracking', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\EdgeUI', value: 'DisableMFUTracking', type: REG_DWORD, data: '1'}
+  # -- GAME BAR --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\GameBar', value: 'GamepadNexusChordEnabled', type: REG_DWORD, data: '0'}
+  # -- TIME & LANGUAGE --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\input\Settings', value: 'IsVoiceTypingKeyEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\input\Settings', value: 'InsightsEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'EnableAutoShiftEngage', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'EnableKeyAudioFeedback', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'EnableDoubleTapSpace', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'TouchKeyboardTapInvoke', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\CTF\LangBar', value: 'ExtraIconsOnMinimized', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\CTF\LangBar', value: 'Label', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\CTF\LangBar', value: 'ShowStatus', type: REG_DWORD, data: '3'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\CTF\LangBar', value: 'Transparency', type: REG_DWORD, data: '255'}
+  - !registryValue: {path: 'HKCU\Keyboard Layout\Toggle', value: 'Language Hotkey', type: REG_SZ, data: '3'}
+  - !registryValue: {path: 'HKCU\Keyboard Layout\Toggle', value: 'Hotkey', type: REG_SZ, data: '3'}
+  - !registryValue: {path: 'HKCU\Keyboard Layout\Toggle', value: 'Layout Hotkey', type: REG_SZ, data: '3'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'GleamEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'WeatherEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'HolidayEnabled', type: REG_DWORD, data: '0'}
+  # -- TOUCH / TABLET --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'TipbandDesiredVisibility', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'IsKeyBackgroundEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\EmbeddedInkControl', value: 'EnableInkingWithTouch', type: REG_DWORD, data: '0'}
+  # -- DEVICES --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Shell\USB', value: 'NotifyOnUsbErrors', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows NT\CurrentVersion\Windows', value: 'LegacyDefaultPrinterMode', type: REG_DWORD, data: '1'}
+  # -- DYNAMIC LIGHTING --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Lighting', value: 'AmbientLightingEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Lighting', value: 'ControlledByForegroundApp', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Lighting', value: 'UseSystemAccentColor', type: REG_DWORD, data: '0'}
+  # -- SYSTEM: PrtSc snipping & video settings --
+  - !registryValue: {path: 'HKCU\Control Panel\Keyboard', value: 'PrintScreenKeyForSnippingEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\VideoSettings', value: 'VideoQualityOnBattery', type: REG_DWORD, data: '1'}
+  # -- NOTIFICATIONS (per-app channels) --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\PushNotifications', value: 'ToastEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Microsoft.SkyDrive.Desktop', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.AutoPlay', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.SecurityAndMaintenance', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.CapabilityAccess', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.StartupApp', value: 'Enabled', type: REG_DWORD, data: '0'}
+  # -- SUGGESTED ACTIONS --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\SmartActionPlatform\SmartClipboard', value: 'Disabled', type: REG_DWORD, data: '1'}
+  # -- STORAGE SENSE: disable globally --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\StorageSense', value: 'AllowStorageSenseGlobal', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '04', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '2048', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '08', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '256', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '32', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: 'StoragePoliciesChanged', type: REG_DWORD, data: '1'}
+  # -- CDP / NEARBY SHARING --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CDP', value: 'DragTrayEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP', value: 'RomeSdkChannelUserAuthzPolicy', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP', value: 'CdpSessionUserAuthzPolicy', type: REG_DWORD, data: '0'}
+  # -- TASKBAR: End Task on right-click --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings', value: 'TaskbarEndTask', type: REG_DWORD, data: '1'}
+  # -- LONG PATHS --
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\FileSystem', value: 'LongPathsEnabled', type: REG_DWORD, data: '1'}
+  # -- ALT+TAB: open windows only, no browser tabs --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'MultiTaskingAltTabFilter', type: REG_DWORD, data: '3'}
+  # -- DEVICE USAGE / CLOUD EXPERIENCE HOST --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\developer', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\developer', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\gaming', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\gaming', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\family', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\family', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\creative', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\creative', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\schoolwork', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\schoolwork', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\entertainment', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\entertainment', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\business', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\business', value: 'Priority', type: REG_DWORD, data: '0'}
+  # Wipe CapabilityConsentStorage.db so privacy Deny grants actually take effect
+  - !powerShell: {command: 'Stop-Service -Name ''camsvc'' -Force -EA 0; Remove-Item ($env:ProgramData + ''\Microsoft\Windows\CapabilityAccessManager\CapabilityConsentStorage.db*'') -Force -EA 0', runas: currentUserElevated, wait: true}
+  # Disable Defrag scheduled task
+  - !scheduledTask: {path: '\Microsoft\Windows\Defrag\ScheduledDefrag', operation: disable}
+  # Disable lock-on-idle (sign-in required after wake) for both AC and DC
+  - !cmd: {command: 'powercfg /setdcvalueindex scheme_current sub_none consolelock 0 2>nul & powercfg /setacvalueindex scheme_current sub_none consolelock 0 2>nul', runas: currentUserElevated, wait: true}
+  # Patch dynamic GUID for CloudStore priority-notifications profile
+  - !powerShell: {command: '$guids = Get-ChildItem ''HKCU:\Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current'' -EA 0 | Where-Object { $_.PSChildName -match ''^\{[a-f0-9-]+\}\$'' } | ForEach-Object { ($_.PSChildName -split ''\$'')[0] } | Select-Object -Unique; $data = ''43,42,01,00,0A,02,01,00,2A,06,DF,B8,B4,CC,06,2A,2B,0E,D0,03,43,42,01,00,C2,0A,01,CD,14,06,02,05,00,00,01,01,02,00,03,01,04,00,CC,32,12,05,28,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,53,00,63,00,72,00,65,00,65,00,6E,00,53,00,6B,00,65,00,74,00,63,00,68,00,5F,00,38,00,77,00,65,00,6B,00,79,00,62,00,33,00,64,00,38,00,62,00,62,00,77,00,65,00,21,00,41,00,70,00,70,00,29,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,57,00,69,00,6E,00,64,00,6F,00,77,00,73,00,41,00,6C,00,61,00,72,00,6D,00,73,00,5F,00,38,00,77,00,65,00,6B,00,79,00,62,00,33,00,64,00,38,00,62,00,62,00,77,00,65,00,21,00,41,00,70,00,70,00,31,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,58,00,62,00,6F,00,78,00,41,00,70,00,70,00,5F,00,38,00,77,00,65,00,6B,00,79,00,62,00,33,00,64,00,38,00,62,00,62,00,77,00,65,00,21,00,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,58,00,62,00,6F,00,78,00,41,00,70,00,70,00,2D,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,58,00,62,00,6F,00,78,00,47,00,61,00,6D,00,69,00,6E,00,67,00,4F,00,76,00,65,00,72,00,6C,00,61,00,79,00,5F,00,38,00,77,00,65,00,6B,00,79,00,62,00,33,00,64,00,38,00,62,00,62,00,77,00,65,00,21,00,41,00,70,00,70,00,29,57,00,69,00,6E,00,64,00,6F,00,77,00,73,00,2E,00,53,00,79,00,73,00,74,00,65,00,6D,00,2E,00,4E,00,65,00,61,00,72,00,53,00,68,00,61,00,72,00,65,00,45,00,78,00,70,00,65,00,72,00,69,00,65,00,6E,00,63,00,65,00,52,00,65,00,63,00,65,00,69,00,76,00,65,00,00,00,00,00''; $bytes = ($data -split '','' | ForEach-Object { [byte](''0x'' + $_.Trim()) }); foreach ($guid in $guids) { $key = ''HKCU:\Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current\'' + $guid + ''$windows.data.donotdisturb.quiethoursprofile$quiethoursprofilelist\windows.data.donotdisturb.quiethoursprofile$microsoft.quiethoursprofile.priorityonly''; New-Item $key -Force -EA 0 | Out-Null; Set-ItemProperty $key ''Data'' $bytes -Type Binary -EA 0 }', runas: currentUserElevated, wait: true}
+  # Deploy clean start2.bin (empty Win11 Start menu layout)
+  - !powerShell: {command: '$d = ($env:LOCALAPPDATA + ''\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState''); if (Test-Path $d) { Copy-Item (Join-Path $PWD ''start2.bin'') -Destination $d -Force -EA 0 }', exeDir: true, runas: currentUserElevated, wait: true}
+  # Unpin all taskbar items and remove Quick Launch
+  - !cmd: {command: 'reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband" /f >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !powerShell: {command: 'Remove-Item -Recurse -Force ($env:USERPROFILE + ''\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch'') -EA 0', runas: currentUserElevated, wait: true}
+  # Hide Accessibility/Accessories folders from Start menu
+  - !powerShell: {command: 'foreach ($f in @(($env:USERPROFILE + ''\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Accessibility''), ($env:ProgramData + ''\Microsoft\Windows\Start Menu\Programs\Accessibility''), ($env:ProgramData + ''\Microsoft\Windows\Start Menu\Programs\Accessories''))) { if (Test-Path $f) { cmd /c (''attrib +h "'' + $f + ''" >nul 2>&1''); cmd /c (''attrib +h "'' + $f + ''\*.*" /s /d >nul 2>&1'') } }', runas: currentUserElevated, wait: true}
+
+  # ==========================================================================

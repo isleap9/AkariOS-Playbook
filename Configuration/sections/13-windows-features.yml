@@ -1,0 +1,18 @@
+  # SECTION 13 - WINDOWS FEATURES (DISM)
+  # ==========================================================================
+  - !status: {status: 'Enabling DirectPlay'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Enable-Feature /FeatureName:"DirectPlay" /NoRestart /All'}
+  - !status: {status: 'Disabling StepsRecorder'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Remove-Capability /CapabilityName:"App.StepsRecorder~~~~0.0.1.0" /NoRestart'}
+  - !status: {status: 'Disabling Legacy Media Player'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"WindowsMediaPlayer" /NoRestart'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"MediaPlayback" /NoRestart'}
+  - !status: {status: 'Disabling SMBDirect'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"SMBDirect" /NoRestart'}
+  - !status: {status: 'Disabling Workfolders Client'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"Workfolders-client" /NoRestart'}
+  - !status: {status: 'Disabling WCF services & portsharing'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"WCF-Services45" /NoRestart'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"WCF-TCP-PortSharing45" /NoRestart'}
+
+  # ==========================================================================

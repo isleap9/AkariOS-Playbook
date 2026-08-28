@@ -1,0 +1,12 @@
+  # SECTION 07 - USER ACCOUNT CONTROL  (toggle: disable-uac)
+  # ==========================================================================
+  - !status: {status: 'Disabling UAC', option: 'disable-uac'}
+  - !service: {name: 'luafv', operation: change, startup: 4, option: 'disable-uac'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'EnableLUA', type: REG_DWORD, data: '0', option: 'disable-uac'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'PromptOnSecureDesktop', type: REG_DWORD, data: '0', option: 'disable-uac'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'ConsentPromptBehaviorAdmin', type: REG_DWORD, data: '0', option: 'disable-uac'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'ValidateAdminCodeSignatures', type: REG_DWORD, data: '0', option: 'disable-uac'}
+  # allow password sign-in (WinSux)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device', value: 'DevicePasswordLessBuildVersion', type: REG_DWORD, data: '0'}
+
+  # ==========================================================================

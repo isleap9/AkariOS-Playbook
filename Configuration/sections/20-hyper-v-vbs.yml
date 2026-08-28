@@ -1,0 +1,24 @@
+  # SECTION 20 - HYPER-V / VBS  (toggle: disable-hyperv)
+  # ==========================================================================
+  - !status: {status: 'Disabling Hyper-V & VBS', option: 'disable-hyperv'}
+  # VBS / memory integrity / device guard off (WinSux-style)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard', value: 'EnableVirtualizationBasedSecurity', type: REG_DWORD, data: '0', option: 'disable-hyperv'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity', value: 'Enabled', type: REG_DWORD, data: '0', option: 'disable-hyperv'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\CredentialGuard', value: 'Enabled', type: REG_DWORD, data: '0', option: 'disable-hyperv'}
+  - !service: {name: 'vmbushid', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'HvHost', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmickvpexchange', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'storflt', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'Vid', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmbus', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmicvss', operation: change, startup: 4, option: 'disable-hyperv'}   # Hyper-V guest VSS only (NOT host System Restore)
+  - !service: {name: 'vmicshutdown', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmicheartbeat', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmictimesync', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vpci', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'storqosflt', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !run: {exe: 'bcdedit', args: '/set hypervisorlaunchtype off', option: 'disable-hyperv'}
+  - !run: {exe: 'bcdedit', args: '/set vsmlaunchtype Off', option: 'disable-hyperv'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"Microsoft-Hyper-V-All" /NoRestart', option: 'disable-hyperv'}
+
+  # ==========================================================================

@@ -1,0 +1,18 @@
+  # SECTION 09 - 7-ZIP  (toggle: 7zip)
+  #   Install latest x64 from GitHub + core config/associations.
+  #   (Full per-extension association list from Vain can be expanded later.)
+  # ==========================================================================
+  - !status: {status: 'Installing 7-Zip', option: '7zip'}
+  - !download: {git: 'https://github.com/ip7z/7zip', regex: '^7z.*-x64\.exe$', destination: '%temp%\7Zip.exe', overwrite: true, option: '7zip'}
+  - !cmd: {command: '"%temp%\7Zip.exe" /S', runas: currentUserElevated, wait: true, option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\7-Zip\Options', value: 'ContextMenu', type: REG_DWORD, data: '4903', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.7z', value: '', type: REG_SZ, data: '7-Zip.7z', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.zip', value: '', type: REG_SZ, data: '7-Zip.zip', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.rar', value: '', type: REG_SZ, data: '7-Zip.rar', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.tar', value: '', type: REG_SZ, data: '7-Zip.tar', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.gz', value: '', type: REG_SZ, data: '7-Zip.gz', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.iso', value: '', type: REG_SZ, data: '7-Zip.iso', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\7-Zip.7z\shell\open\command', value: '', type: REG_SZ, data: '"C:\Program Files\7-Zip\7zFM.exe" "%1"', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\7-Zip.zip\shell\open\command', value: '', type: REG_SZ, data: '"C:\Program Files\7-Zip\7zFM.exe" "%1"', option: '7zip'}
+
+  # ==========================================================================

@@ -1,0 +1,7 @@
+  # SECTION 27 - LEGACY CONTEXT MENU  (toggle: legacy-context-menu)
+  #   Restores the full Windows 10 right-click menu on Windows 11.
+  # ==========================================================================
+  - !status: {status: 'Enabling legacy context menu', option: 'legacy-context-menu'}
+  - !registryValue: {path: 'HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32', value: '', type: REG_SZ, data: '', option: 'legacy-context-menu'}
+
+  # ==========================================================================

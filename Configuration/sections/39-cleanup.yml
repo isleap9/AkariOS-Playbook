@@ -1,0 +1,11 @@
+  # SECTION 39 - CLEANUP
+  #   NOTE: 'vssadmin delete shadows' is deliberately OMITTED so the restore
+  #   point created in Section 37 survives (safety net, decision #4).
+  # ==========================================================================
+  - !status: {status: 'Cleaning up'}
+  - !file: {path: '%SystemDrive%\PerfLogs'}
+  - !file: {path: '%SystemDrive%\inetpub'}
+  - !cmd: {command: 'del /f /s /q "%WINDIR%\Temp\*" >nul 2>&1', wait: true}
+  - !cmd: {command: 'for /f "tokens=*" %i in (''wevtutil el'') do wevtutil cl "%i" >nul 2>&1', wait: true}
+
+  # ==========================================================================

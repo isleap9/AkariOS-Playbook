@@ -151,10 +151,44 @@ If something goes wrong during installation:
 
 ```
 AkariOS-Playbook/
-├── Configuration/   # Playbook YAML tasks and tweaks
-├── Executables/     # Batch and PowerShell scripts
-└── playbook.conf    # Playbook metadata, version, and feature pages
+├── Configuration/
+│   ├── custom.yml              # Generated monolithic playbook (edit via sections + build script)
+│   ├── header.yml              # YAML header (comment block + 'actions:' key)
+│   ├── sections/               # Modular section files (01-initialize.yml through 40-end.yml)
+│   └── files/                  # Runtime assets deployed to target system
+├── Executables/                # PowerShell scripts, C# source, binaries
+├── Images/                     # Browser picker images for AME Wizard
+├── scripts/
+│   ├── split-playbook.py       # One-time: split custom.yml into sections
+│   └── build-playbook.py       # Build: concatenate sections → custom.yml
+├── playbook.conf               # AME Wizard UI config (feature pages, toggles)
+├── playbook.png                # Playbook thumbnail
+├── CLAUDE.md                   # AI assistant project memory
+└── README.md                   # This file
 ```
+
+### 🛠️ Development Workflow
+
+The playbook is organized into modular section files under `Configuration/sections/`. AME Wizard requires a single monolithic `custom.yml` file, so a build step is needed after editing sections.
+
+**To edit the playbook:**
+
+1. Edit the relevant file in `Configuration/sections/` (e.g., `10-browsers-*.yml`)
+2. Run the build script to regenerate `Configuration/custom.yml`:
+   ```bash
+   python scripts/build-playbook.py
+   ```
+3. Commit both the section file(s) and the regenerated `custom.yml`
+
+**Build script flags:**
+- `--dry-run` — Preview the generated content without writing
+- `--verify` — Compare output against `custom.yml.bak` for byte-identical verification
+
+**Other commands:**
+- `python scripts/build-playbook.py --dry-run` — Preview without writing
+- `python scripts/split-playbook.py` — One-time: split an existing monolithic `custom.yml` into sections (runs automatically during initial setup, not needed for normal edits)
+
+> **Note:** `Configuration/custom.yml` is a build artifact from the section files. It is committed to the repo so AME Wizard can load it directly — no build step is needed when loading an existing release.
 
 ---
 

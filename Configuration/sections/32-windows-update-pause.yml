@@ -1,0 +1,7 @@
+  # SECTION 32 - WINDOWS UPDATE - PAUSE  (toggle: disable-wu, WinSux 365-day)
+  #   Pauses updates ~365 days (reversible), does NOT permanently disable WU.
+  # ==========================================================================
+  - !status: {status: 'Pausing Windows Update', option: 'disable-wu'}
+  - !powerShell: {command: '$s=(Get-Date).ToUniversalTime().ToString(''yyyy-MM-ddTHH:mm:ssZ''); $e=(Get-Date).AddDays(365).ToUniversalTime().ToString(''yyyy-MM-ddTHH:mm:ssZ''); $k=''HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings''; New-Item $k -Force -EA 0 | Out-Null; Set-ItemProperty $k PauseUpdatesExpiryTime $e -Force; Set-ItemProperty $k PauseFeatureUpdatesStartTime $s -Force; Set-ItemProperty $k PauseFeatureUpdatesEndTime $e -Force; Set-ItemProperty $k PauseQualityUpdatesStartTime $s -Force; Set-ItemProperty $k PauseQualityUpdatesEndTime $e -Force', runas: currentUserElevated, wait: true, option: 'disable-wu'}
+
+  # ==========================================================================

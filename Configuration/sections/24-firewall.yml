@@ -1,0 +1,17 @@
+  # SECTION 24 - FIREWALL  (keep firewall ON; privacy hardening only)
+  #   Notifications + logging off, plus targeted outbound BLOCK rules for
+  #   telemetry-heavy shell components. We deliberately do NOT wipe the whole
+  #   FirewallRules key (Vain does) - that can break inbound sharing/games.
+  # ==========================================================================
+  - !status: {status: 'Configuring Firewall'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile', value: 'DisableNotifications', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile', value: 'DisableNotifications', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\PublicProfile', value: 'DisableNotifications', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\StandardProfile\Logging', value: 'LogDroppedPackets', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile\Logging', value: 'LogDroppedPackets', type: REG_DWORD, data: '0'}
+  # Targeted outbound blocks (Search/Cortana + Settings phone-home)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules', value: 'Block SearchApp', type: REG_SZ, data: 'v2.32|Action=Block|Active=TRUE|Dir=Out|App=%SystemRoot%\SystemApps\Microsoft.Windows.Search_cw5n1h2txyewy\SearchApp.exe|Name=Block SearchApp|'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules', value: 'Block SearchHost', type: REG_SZ, data: 'v2.32|Action=Block|Active=TRUE|Dir=Out|App=%SystemRoot%\SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\SearchHost.exe|Name=Block SearchHost|'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules', value: 'Block SystemSettings', type: REG_SZ, data: 'v2.32|Action=Block|Active=TRUE|Dir=Out|App=%SystemRoot%\ImmersiveControlPanel\SystemSettings.exe|Name=Block SystemSettings|'}
+
+  # ==========================================================================

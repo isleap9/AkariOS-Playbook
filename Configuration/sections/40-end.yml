@@ -1,0 +1,5 @@
+  # SECTION 40 - END
+  # ==========================================================================
+  # Desktop icon cleanup: wipe stored icon positions so Windows resets to a clean layout on first login
+  - !registryKey: {path: 'HKCU\Software\Microsoft\Windows\Shell\Bags\1\Desktop', operation: delete}
+  - !status: {status: 'AkariOS V6 - Done'}

@@ -1,0 +1,22 @@
+  # SECTION 18 - PRINTING (toggle: disable-print) + BLUETOOTH (toggle: disable-bluetooth)
+  # ==========================================================================
+  - !status: {status: 'Disabling Printing', option: 'disable-print'}
+  - !service: {name: 'spooler', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'printworkflowusersvc', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'stisvc', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'PrintNotify', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'usbprint', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'McpManagementService', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'PrintScanBrokerService', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'PrintDeviceConfigurationService', operation: change, startup: 4, option: 'disable-print'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"Printing-PrintToPDFServices-Features" /NoRestart', option: 'disable-print'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"Printing-Foundation-Features" /NoRestart', option: 'disable-print'}
+
+  - !status: {status: 'Disabling Bluetooth', option: 'disable-bluetooth'}
+  - !service: {name: 'bthserv', operation: change, startup: 4, option: 'disable-bluetooth'}
+  - !service: {name: 'BTAGService', operation: change, startup: 4, option: 'disable-bluetooth'}
+  - !service: {name: 'BthAvctpSvc', operation: change, startup: 4, option: 'disable-bluetooth'}
+  - !service: {name: 'bthleenum', operation: change, startup: 4, option: 'disable-bluetooth'}
+  - !powerShell: {command: "Get-PnpDevice -Class Bluetooth -ErrorAction Ignore | Disable-PnpDevice -Confirm:$false -ErrorAction Ignore", runas: currentUserElevated, wait: true, option: 'disable-bluetooth'}
+
+  # ==========================================================================

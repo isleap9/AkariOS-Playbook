@@ -1,0 +1,166 @@
+  # SECTION 16 - APPX DEBLOAT  (explicit allowlist style - ported from AkariV5)
+  #
+  #   KEEP (deliberately NOT removed - load-bearing or wanted):
+  #     * Microsoft.WindowsTerminal      <- keeps CTRL+C/V + modern console
+  #     * Microsoft.WindowsStore         <- app installs
+  #     * Microsoft.DesktopAppInstaller  <- winget
+  #     * Microsoft.WindowsNotepad       <- default editor
+  #     * Microsoft.Paint                <- keep for everyday users
+  #     * Microsoft.SecHealthUI          <- Defender UI (breaks if removed)
+  #     * StartMenuExperienceHost / ShellExperienceHost / immersivecontrolpanel
+  #     * *CBS*, video/image extensions  <- explorer + media stability
+  #     * Xbox GamingApp + IdentityProvider (kept for Game Pass gamers)
+  #   Only the explicitly listed packages below are removed.
+  # ==========================================================================
+  - !status: {status: 'Removing AppX Packages'}
+  - !appx: {name: '*Disney*', type: family}
+  - !appx: {name: '*Spotify*', type: family}
+  - !appx: {name: '*SpotifyMusic*', type: family}
+  - !appx: {name: '*SecureAssessmentBrowser*', type: family}
+  - !appx: {name: '*PeopleExperienceHost*', type: family}
+  - !appx: {name: '*Microsoft.People*', type: family}
+  - !appx: {name: '*Microsoft.WindowsCamera*', type: family}
+  - !appx: {name: '*Microsoft.WindowsAlarms*', type: family}
+  - !appx: {name: '*Microsoft.WindowsMaps*', type: family}
+  - !appx: {name: '*Microsoft.MicrosoftStickyNotes*', type: family}
+  - !appx: {name: '*Microsoft.BingNews*', type: family}
+  - !appx: {name: '*Microsoft.BingWeather*', type: family}
+  - !appx: {name: '*BingSearch*', type: family}
+  - !appx: {name: '*Microsoft.MicrosoftSolitaireCollection*', type: family}
+  - !appx: {name: '*Microsoft.WindowsFeedbackHub*', type: family}
+  - !appx: {name: '*Microsoft.GetHelp*', type: family}
+  - !appx: {name: '*Microsoft.Getstarted*', type: family}
+  - !appx: {name: '*Microsoft.Todos*', type: family}
+  - !appx: {name: '*Microsoft.PowerAutomateDesktop*', type: family}
+  - !appx: {name: '*Microsoft.549981C3F5F10*', type: family}
+  - !appx: {name: '*MicrosoftCorporationII.QuickAssist*', type: family}
+  - !appx: {name: '*MicrosoftCorporationII.MicrosoftFamily*', type: family}
+  - !appx: {name: '*Microsoft.ZuneVideo*', type: family}
+  - !appx: {name: '*Microsoft.WindowsSoundRecorder*', type: family}
+  - !appx: {name: '*Clipchamp.Clipchamp*', type: family}
+  - !appx: {name: '*Microsoft.Whiteboard*', type: family}
+  - !appx: {name: '*microsoft.microsoftskydrive*', type: family}
+  - !appx: {name: '*Microsoft.MicrosoftPowerBIForWindows*', type: family}
+  - !appx: {name: '*Microsoft.SkypeApp*', type: family}
+  - !appx: {name: '*Microsoft.MicrosoftOfficeHub*', type: family}
+  - !appx: {name: '*Microsoft.Office.OneNote*', type: family}
+  - !appx: {name: '*OutlookForWindows*', type: family}
+  - !appx: {name: '*OutlookPWA*', type: family}
+  - !appx: {name: '*Microsoft.Microsoft3DViewer*', type: family}
+  - !appx: {name: 'Microsoft.Advertising*', type: family}
+  - !appx: {name: '*MixedReality.Portal*', type: family}
+  - !appx: {name: '*DevHome*', type: family}
+  - !appx: {name: '*Flipgrid*', type: family}
+  - !appx: {name: '*Microsoft.YourPhone*', type: family}
+  - !appx: {name: '*MicrosoftWindows.CrossDevice*', type: family}
+  - !appx: {name: '*Microsoft.Windows.Ai.Copilot*', type: family}
+  - !appx: {name: '*Microsoft.Copilot*', type: family}
+  - !appx: {name: '*Windows.Client.CoreAI*', type: family}
+  - !appx: {name: '*MicrosoftWindows.Client.AIX*', type: family, weight: 10}
+  # Copilot policy off (Ultimate) - durable, survives appx regeneration
+  - !registryValue: {path: 'HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot', value: 'TurnOffWindowsCopilot', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot', value: 'TurnOffWindowsCopilot', type: REG_DWORD, data: '1'}
+  # Teams (kill process first, then remove installed + provisioned)
+  - !taskKill: {name: '*teams*', ignoreErrors: true}
+  - !appx: {name: '*MicrosoftTeams*', type: family}
+  - !appx: {name: '*MSTeams*', type: family, weight: 10}
+  # Communications apps (leaves taskbar leftovers unless removed via PS)
+  - !powerShell: {command: 'Get-AppxPackage *windowscommunicationsapps* | Remove-AppxPackage', runas: currentUserElevated, errorAction: Ignore}
+  - !appx: {name: '*microsoft.windowscommunicationsapps*', type: family, weight: 10}
+  # Web experience / widgets
+  - !powerShell: {command: 'Get-AppxPackage MicrosoftWindows.Client.WebExperience | Remove-AppxPackage', runas: currentUserElevated, errorAction: Ignore}
+  - !appx: {name: '*WebExperienceHost*', type: app, unregister: true}
+  # Windows Backup
+  - !appx: {name: '*WindowsBackup*', type: app, unregister: true, weight: 10}
+  # Ensure provisioned copies of the big offenders don't return for new users
+  - !powerShell: {command: 'Get-AppxPackage Microsoft.YourPhone* | Remove-AppxPackage; Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq ''Microsoft.YourPhone'' } | Remove-AppxProvisionedPackage -Online', runas: currentUserElevated, wait: true, errorAction: Ignore}
+  - !powerShell: {command: 'Get-AppxPackage MicrosoftTeams* | Remove-AppxPackage; Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq ''MicrosoftTeams'' } | Remove-AppxProvisionedPackage -Online', runas: currentUserElevated, wait: true, errorAction: Ignore}
+  # Extra appx entries from vain (internal/hidden packages)
+  - !appx: {name: '*ContentDeliveryManager*', type: family}
+  - !appx: {name: '*Microsoft.ECApp*', type: family}
+  - !appx: {name: '*Microsoft.Lockapp*', type: family}
+  - !appx: {name: '*Microsoft.BioEnrollment*', type: family}
+  - !appx: {name: '*c5e2524a-ea46-4f67-841f-6a9465d9d515*', type: family}
+  - !appx: {name: '*F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE*', type: family}
+  - !appx: {name: '*NarratorQuickStart*', type: family}
+  - !appx: {name: '*AsyncTextService*', type: family}
+  - !appx: {name: '*XGpuEjectDialog*', type: family}
+  - !appx: {name: '*ParentalControls*', type: family}
+  - !appx: {name: '*Microsoft.Windows.CallingShellApp*', type: family}
+  - !appx: {name: '*CredDialogHost*', type: family}
+  - !appx: {name: '*PinningConfirmationDialog*', type: family}
+  - !appx: {name: '*client.oobe*', type: family}
+  - !appx: {name: '*client.photon*', type: family}
+  - !appx: {name: '*OOBENetworkCaptivePortal*', type: family}
+  - !appx: {name: '*OOBENetworkConnectionFlow*', type: family}
+  - !appx: {name: '*CapturePicker*', type: family}
+  - !appx: {name: '*WidgetsPlatformRuntime*', type: family}
+  - !appx: {name: '*MicrosoftWindows.LKG.DesktopSpotlight*', type: family}
+  - !appx: {name: '*MicrosoftWindows.LKG.IrisService*', type: family}
+  - !appx: {name: '*MicrosoftWindows.LKG.SpeechRuntime*', type: family}
+  - !appx: {name: 'MicrosoftWindows.LKG.AccountsService*', type: family}
+  - !appx: {name: 'MicrosoftWindows.LKG.RulesEngine*', type: family}
+  - !appx: {name: 'MicrosoftWindows.LKG.TwinSxS*', type: family}
+  - !appx: {name: 'MicrosoftWindows.LKG.Search*', type: family}
+  - !appx: {name: '*Livtop*', type: family}
+  - !appx: {name: '*InpApp*', type: family}
+  - !appx: {name: '*Speion*', type: family}
+  - !appx: {name: '*Voiess*', type: family}
+  - !appx: {name: '*Filons*', type: family}
+  - !appx: {name: '*DesktopSpotlight*', type: app}
+  - !appx: {name: '*IrisService*', type: app}
+  - !appx: {name: '*CopilotNudges*', type: app}
+  - !appx: {name: '*CrossDeviceResume*', type: app}
+  - !appx: {name: '*CrossDeviceResumeApp*', type: app}
+  - !appx: {name: '*FamilyValueProp*', type: app}
+  - !appx: {name: '*PackageMetadata', type: app}
+  - !appx: {name: '*Global.AppListBackup*', type: app}
+  - !appx: {name: '*Global.DesktopStickerEditor*', type: app}
+  - !appx: {name: '*DesktopStickerEditorCentennial*', type: app}
+  - !appx: {name: '*Global.DesktopVisual*', type: app}
+  - !appx: {name: '*Global.LiveCaptionsDesktop*', type: app}
+  - !appx: {name: '*LogonWebHost*', type: app}
+  - !appx: {name: '*VisualAssist*', type: app}
+  - !appx: {name: '*Global.FeatureDiscoverability*', type: app}
+  - !appx: {name: '*Global.MicrosoftGraphRecentItemsManager*', type: app}
+  - !appx: {name: '*Global.PersonaCardManager*', type: app}
+  - !appx: {name: '*Global.RulesEngine*', type: app}
+  - !appx: {name: '*Global.WindowsMigration*', type: app}
+  - !appx: {name: '*MiniSearchUI*', type: app}
+  - !appx: {name: '*FESearchUI*', type: app}
+  - !appx: {name: '*Global.SpeechRecognizerExtension*', type: app}
+  - !appx: {name: '*Global.TwinSxS*', type: app}
+  - !appx: {name: '*Global.SpeechSynthesizerExtension*', type: app}
+  - !appx: {name: '*Global.ValueBanner*', type: app}
+  - !appx: {name: '*Global.WindowsPeopleExperience*', type: app}
+  - !appx: {name: '*Global.ExperienceExtensions*', type: app}
+  - !appx: {name: '*Global.WsxPackManager*', type: app}
+  - !appx: {name: '*Global.BackupBanner*', type: app}
+  - !appx: {name: '*Global.VoiceAccessHost*', type: app}
+  - !appx: {name: '*Global.VoiceAccessPlugin*', type: app}
+  - !appx: {name: '*Global.DragTray*', type: app}
+  - !appx: {name: '*Global.LockCanvas*', type: app}
+  - !appx: {name: '*Global.WidgetDataModel*', type: app}
+  - !appx: {name: '*Global.WidgetPicker*', type: app}
+  - !appx: {name: '*Global.WidgetViewUWP*', type: app}
+  - !appx: {name: '*Global.WidgetViewWinUI3*', type: app}
+  - !appx: {name: '*Global.wsw*', type: app}
+  - !appx: {name: '*ActionRuntime*', type: app}
+  - !appx: {name: '*Global.ActionUI*', type: app}
+  - !appx: {name: '*Global.ActionUi.Common*', type: app}
+  - !appx: {name: '*SoftLanding*', type: app}
+  - !appx: {name: '*DiscoveryHub*', type: app}
+  - !appx: {name: '*DiscoveryHubWidgetHost*', type: app}
+  - !appx: {name: '*Global.PeopleExperiencePlatform*', type: app}
+  - !appx: {name: '*Global.PeopleWidget*', type: app}
+  - !appx: {name: '*Global.WindowsPersonaCard*', type: app}
+  - !appx: {name: '*Global.AccountDialog*', type: app}
+  - !appx: {name: '*Global.Accounts*', type: app}
+  - !appx: {name: '*SettingsModelService*', type: app}
+  # Clear cached app state — this wipes the Start menu pin layout (start2.bin equivalent)
+  - !appx: {operation: clearCache, name: '*MicrosoftWindows.Client.CBS*'}
+  - !appx: {operation: clearCache, name: '*Microsoft.Windows.Search*'}
+  - !appx: {operation: clearCache, name: '*Microsoft.Windows.SecHealthUI*'}
+  - !appx: {operation: clearCache, name: '*StartMenuExperienceHost*'}
+
+  # ==========================================================================

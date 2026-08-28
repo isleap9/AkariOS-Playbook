@@ -1,0 +1,19 @@
+  # SECTION 02 - THEME  (toggle: enable-dark-mode)  Ultimate true-black theme:
+  #   dark mode + transparency off + near-black accent (ff191919), black start.
+  # ==========================================================================
+  - !status: {status: 'Applying Black Theme', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'SystemUsesLightTheme', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'AppsUseLightTheme', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'ColorPrevalence', type: REG_DWORD, data: '1', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'EnableTransparency', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'AppsUseLightTheme', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent', value: 'AccentPalette', type: REG_BINARY, data: '646464006b6b6b00000000000000000000000000000000000000000000000000', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent', value: 'StartColorMenu', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent', value: 'AccentColorMenu', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\DWM', value: 'EnableWindowColorization', type: REG_DWORD, data: '1', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\DWM', value: 'AccentColor', type: REG_DWORD, data: '4279834905', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\DWM', value: 'ColorizationColor', type: REG_DWORD, data: '3289979161', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\DWM', value: 'ColorizationAfterglow', type: REG_DWORD, data: '3289979161', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Control Panel\Colors', value: 'Background', type: REG_SZ, data: '0 0 0', option: 'enable-dark-mode'}
+
+  # ==========================================================================

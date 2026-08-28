@@ -1,0 +1,17 @@
+  # SECTION 19 - BCDEDIT
+  #   NOTE: 'recoveryenabled no' is deliberately OMITTED -> WinRE stays ON
+  #   (safety net, decision #4). hypervisorlaunchtype handled in Section 20.
+  # ==========================================================================
+  - !status: {status: 'Configuring BCDEDIT'}
+  - !run: {exe: 'bcdedit', args: '/set {current} description "AkariOS"'}
+  - !run: {exe: 'bcdedit', args: '/set bootmenupolicy Legacy'}
+  - !run: {exe: 'bcdedit', args: '/set disabledynamictick yes'}
+  - !run: {exe: 'bcdedit', args: '/set {current} nx optin'}
+  - !run: {exe: 'bcdedit', args: '/set {current} disableelamdrivers yes'}
+  - !run: {exe: 'powercfg', args: '-h off'}
+  - !run: {exe: 'label', args: '%systemdrive% AkariOS'}
+  # FileSystem
+  - !run: {exe: 'fsutil', args: 'behavior set disablelastaccess 1'}
+  - !run: {exe: 'fsutil', args: 'behavior set disable8dot3 1'}
+
+  # ==========================================================================

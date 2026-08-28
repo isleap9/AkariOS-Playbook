@@ -2,7 +2,7 @@
 
 ## Overview
 
-Restructure and audit the AkariOS Windows 11 AME playbook. The project is a monolithic YAML action list (`Configuration/custom.yml`, 1309 lines, 40 sections) paired with an XML UI config (`playbook.conf`). Four phases cover network restructuring, full feature audit, codebase modularization decision, and verification of bug fixes from the August 2026 session.
+Restructure and audit the AkariOS Windows 11 AME playbook. The playbook is organized into modular section files (`Configuration/sections/` with 40 YAML partials + `Configuration/header.yml`) and built into a monolithic `Configuration/custom.yml` via `scripts/build-playbook.py` — AME Wizard requires a single file. Four phases cover network restructuring, full feature audit, codebase modularization, and verification of bug fixes from the August 2026 session.
 
 ## Phases
 
@@ -11,7 +11,7 @@ Restructure and audit the AkariOS Windows 11 AME playbook. The project is a mono
 
 - [x] **Phase 1: Network Restructuring** - Strip Section 29 to Vain-only network tweaks, remove FSOS TCP/IP stack additions
 - [x] **Phase 2: Feature Audit** - Produce a verified feature matrix mapping all 40 sections, cross-check toggles, audit executables and images
-- [ ] **Phase 3: Codebase Restructuring** - Decide on modularization approach for monolithic custom.yml, get user approval, implement if approved
+- [x] **Phase 3: Codebase Restructuring** - Modularize custom.yml into Configuration/sections/ + build script, get user approval
 - [ ] **Phase 4: Bug Verification** - Verify NCSI fix, desktop cleanup, and LibreWolf winget install
 
 ## Phase Details
@@ -58,7 +58,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: Present modularization plan, get user approval, implement if approved
+- [x] 03-01: Present modularization plan, get user approval, implement modularization
 
 ### Phase 4: Bug Verification
 **Goal**: Verify three bug fixes from the August 2026 session: NCSI "Not connected" fix (EnableActiveProbing=1 + netprofm safety-net), Desktop cleanup via registry key delete (clean icon layout on first login), and LibreWolf winget install (winget availability in AME environment).
@@ -83,7 +83,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 ||-------|----------------|--------|-----------|
 || 1. Network Restructuring | 1/1 | Complete | 2026-08-28 |
 || 2. Feature Audit | 1/1 | Complete | 2026-08-28 |
-|| 3. Codebase Restructuring | 0/1 | Not started | - |
+|| 3. Codebase Restructuring | 1/1 | Complete | 2026-08-28 |
 || 4. Bug Verification | 0/1 | Not started | - |
 
 ## Canonical References

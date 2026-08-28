@@ -1,0 +1,56 @@
+  # SECTION 15 - MICROSOFT EDGE  (vain model: gated on !browser-edge)
+  #   Edge is a choice on the browser picker. If the user does NOT pick Edge
+  #   (browser-edge), Edge is removed. Full teardown ported from Vain.
+  # ==========================================================================
+  - !status: {status: 'Removing Microsoft Edge', option: '!browser-edge'}
+  - !service: {name: 'edgeupdate', operation: delete, option: '!browser-edge'}
+  - !service: {name: 'edgeupdatem', operation: delete, option: '!browser-edge'}
+  - !service: {name: 'MicrosoftEdgeElevationService', operation: delete, option: '!browser-edge'}
+  - !file: {path: '%ProgramFiles(x86)%\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !file: {path: '%ProgramFiles(x86)%\Microsoft\EdgeCore', option: '!browser-edge'}
+  - !file: {path: '%ProgramFiles(x86)%\Microsoft\Edge', option: '!browser-edge'}
+  - !file: {path: '%ProgramFiles(x86)%\Microsoft\EdgeWebView', option: '!browser-edge'}
+  - !file: {path: '%LocalAppdata%\Microsoft\Edge', option: '!browser-edge'}
+  - !file: {path: '%ProgramData%\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !file: {path: '%SystemRoot%\system32\Tasks\MicrosoftEdge*', option: '!browser-edge'}
+  - !file: {path: '%ProgramData%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk', option: '!browser-edge'}
+  - !file: {path: '%SystemDrive%\Users\Public\Desktop\Microsoft Edge.lnk', option: '!browser-edge'}
+  - !file: {path: '%Appdata%\Microsoft\Internet Explorer\Quick Launch\Microsoft Edge.lnk', option: '!browser-edge'}
+  - !file: {path: '%Appdata%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Microsoft Edge.lnk', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\edgeupdate', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\edgeupdatem', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCR\microsoft-edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCR\MSEdgeHTM', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCR\MSEdgeMHT', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCR\MSEdgePDF', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\Active Setup\Installed Components\{9459C573-B17A-45AE-9F64-1857B5D58CEE}', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Clients\StartMenuInternet\Microsoft Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\Active Setup\Installed Components\{9459C573-B17A-45AE-9F64-1857B5D58CEE}', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge', option: '!browser-edge'}
+  - !registryValue: {path: 'HKCR\.html\OpenWithProgIds', value: 'MSEdgeHTM', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKCR\.htm\OpenWithProgIds', value: 'MSEdgeHTM', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKCR\.pdf\OpenWithProgIds', value: 'MSEdgePDF', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKCU\Software\RegisteredApplications', value: 'Microsoft Edge', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\RegisteredApplications', value: 'Microsoft Edge', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\EdgeUpdate', value: 'IsEdgeStableUninstalled', type: REG_DWORD, data: '1', option: '!browser-edge'}
+  # WOW6432Node mirror
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Clients\StartMenuInternet\Microsoft Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Microsoft\Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge', option: '!browser-edge'}
+  # appx + update tasks
+  - !appx: {name: '*Edge.GameAssist*', option: '!browser-edge'}
+  - !appx: {name: '*MicrosoftEdgeDevToolsClient*', option: '!browser-edge'}
+  - !appx: {name: '*MicrosoftEdge.Stable*', option: '!browser-edge'}
+  - !powerShell: {command: "Get-ScheduledTask | Where-Object { $_.TaskName -like '*MicrosoftEdgeUpdate*' } | ForEach-Object { Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false }", runas: currentUserElevated, wait: true, option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\EdgeUpdate', operation: 'delete', option: '!browser-edge'}
+  - !powerShell: {command: "Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' | % { $_.PSObject.Properties | ? { $_.Name -like 'MicrosoftEdge*' } | % { Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name $_.Name } }", runas: currentUserElevated, wait: true, option: '!browser-edge'}
+
+  # ==========================================================================

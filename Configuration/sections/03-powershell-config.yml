@@ -1,0 +1,21 @@
+  # SECTION 03 - POWERSHELL CONFIG
+  # ==========================================================================
+  - !status: {status: 'Configuring PowerShell'}
+  - !cmd: {command: 'setx POWERSHELL_TELEMETRY_OPTOUT 1 >nul'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell', value: 'ExecutionPolicy', type: REG_SZ, data: 'Unrestricted'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging', value: 'EnableModuleLogging', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging', value: 'EnableScriptBlockLogging', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging', value: 'EnableScriptBlockInvocationLogging', type: REG_DWORD, data: '0'}
+  # run .ps1 by double-click + run as admin (vain)
+  - !cmd: {command: 'ftype Microsoft.PowerShellScript.1="%systemroot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -EP Unrestricted -File "%1" %* >nul'}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellScript.1\Shell', value: '', type: REG_SZ, data: 'Open'}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellScript.1\Shell\Open\Command', value: '', type: REG_EXPAND_SZ, data: '"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" "%1"'}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellScript.1\Shell\RunAs', value: 'HasLUAShield', type: REG_SZ, data: ''}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellScript.1\Shell\RunAs\Command', value: '', type: REG_EXPAND_SZ, data: '"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" "%1"'}
+  # .psm1 association (vain)
+  - !registryValue: {path: 'HKCR\.psm1', value: '', type: REG_SZ, data: 'Microsoft.PowerShellModule.1'}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellModule.1\Shell', value: '', type: REG_SZ, data: 'Open'}
+  - !registryKey: {path: 'HKCR\.psm1\OpenWithProgids'}
+  - !registryKey: {path: 'HKCR\.ps1\OpenWithProgids'}
+
+  # ==========================================================================

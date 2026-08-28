@@ -1,0 +1,9 @@
+  # SECTION 34 - POST-INSTALL TOOLKIT  (FR33THY Ultimate)
+  #   Deployed to C:\AkariOS\Ultimate by Section 01 robocopy. Unblock the
+  #   scripts (Mark-of-the-Web) and drop a desktop shortcut for manual use.
+  # ==========================================================================
+  - !status: {status: 'Installing Post-Install Toolkit'}
+  - !powerShell: {command: 'Get-ChildItem -Path ($env:SystemDrive + ''\AkariOS\Ultimate'') -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true}
+  - !powerShell: {command: '$w=New-Object -ComObject WScript.Shell; $l=$w.CreateShortcut($env:PUBLIC + ''\Desktop\AkariOS Toolkit.lnk''); $l.TargetPath=($env:SystemDrive + ''\AkariOS\Ultimate''); $l.IconLocation=($env:SystemRoot + ''\System32\imageres.dll,109''); $l.Save()', runas: currentUserElevated, wait: true}
+
+  # ==========================================================================

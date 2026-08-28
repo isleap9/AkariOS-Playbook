@@ -1,0 +1,10 @@
+  # SECTION 37 - SYSTEM RESTORE  (SAFETY NET - decision #4, WinSux logic)
+  #   Enable System Restore and create a fresh "AkariOS" restore point.
+  #   This is why Sections 17/28 avoid VSS and Section 39 avoids delete-shadows.
+  # ==========================================================================
+  - !status: {status: 'Creating Restore Point'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore', value: 'SystemRestorePointCreationFrequency', type: REG_DWORD, data: '0'}
+  - !powerShell: {command: 'Enable-ComputerRestore -Drive ''C:\'' -ErrorAction SilentlyContinue; Checkpoint-Computer -Description ''AkariOS'' -RestorePointType ''MODIFY_SETTINGS'' -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore', value: 'SystemRestorePointCreationFrequency', operation: 'delete'}
+
+  # ==========================================================================

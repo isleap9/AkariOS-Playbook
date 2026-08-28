@@ -1,0 +1,21 @@
+  # SECTION 30 - POWER PLAN  (WinSux - Ultimate Performance, high-perf tuned)
+  # ==========================================================================
+  - !status: {status: 'Configuring Power Plan'}
+  # Duplicate Ultimate Performance to a fixed GUID and activate it
+  - !cmd: {command: 'powercfg /duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 99999999-9999-9999-9999-999999999999 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /SETACTIVE 99999999-9999-9999-9999-999999999999 >nul 2>&1', runas: currentUserElevated, wait: true}
+  # Delete all other power plans
+  - !powerShell: {command: "powercfg /L | ForEach-Object { if ($_ -match ':') { $g=($_ -split ':')[1].Trim(); $g=$g.Substring(0,$g.IndexOf('(')); if ($g -ne '99999999-9999-9999-9999-999999999999') { powercfg /delete $g 2>$null | Out-Null } } }", runas: currentUserElevated, wait: true}
+  # Disable hibernate / fast startup / power throttling
+  - !cmd: {command: 'powercfg /hibernate off', runas: currentUserElevated, wait: true}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power', value: 'HiberbootEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling', value: 'PowerThrottlingOff', type: REG_DWORD, data: '1'}
+  # Processor min/max 100%, cooling active, USB selective suspend off, PCIe LSPM off
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /SETACTIVE 99999999-9999-9999-9999-999999999999 >nul 2>&1', runas: currentUserElevated, wait: true}
+
+  # ==========================================================================

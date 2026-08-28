@@ -1,0 +1,6 @@
+  # SECTION 04 - NGEN  (precompile .NET assemblies)
+  # ==========================================================================
+  - !status: {status: 'Installing NGEN'}
+  - !powerShell: {command: '$env:PATH = [Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory() + '';'' + $env:PATH; foreach($a in [AppDomain]::CurrentDomain.GetAssemblies()){ if($a.Location){ ngen install $a.Location /nologo 2>&1 | Out-Null } }'}
+
+  # ==========================================================================

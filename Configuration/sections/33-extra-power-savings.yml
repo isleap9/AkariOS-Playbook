@@ -1,0 +1,25 @@
+  # SECTION 33 - EXTRA POWER SAVINGS  (toggle: disable-powersave, WinSux way)
+  #   Aggressive powercfg tweaks NOT already in Section 30. Applied to the
+  #   fixed Ultimate plan GUID from Section 30. Reversible (switch plan back).
+  #   NOTE: uniform desktop/laptop (no chassis check) - can over-tune laptops.
+  # ==========================================================================
+  - !status: {status: 'Applying extra power savings', option: 'disable-powersave'}
+  # Hard disk: never turn off
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # Wireless adapter: maximum performance
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # Wake timers: disabled
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 238c9fa8-0aad-41ed-83f4-97be242c8f20 bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # USB hub selective-suspend timeout 0 (unhide attribute + set)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\2a737441-1930-4402-8d77-b2bebba308a3\0853a681-27c8-4100-a2fd-82013e970683', value: 'Attributes', type: REG_DWORD, data: '0', option: 'disable-powersave'}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 2a737441-1930-4402-8d77-b2bebba308a3 0853a681-27c8-4100-a2fd-82013e970683 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # USB3 link power management off (unhide attribute + set)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\2a737441-1930-4402-8d77-b2bebba308a3\d4e98f31-5ffe-4ce1-be31-1b38b384c009', value: 'Attributes', type: REG_DWORD, data: '0', option: 'disable-powersave'}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # Unpark CPU cores (unhide core-parking min cores + set 100%)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583', value: 'Attributes', type: REG_DWORD, data: '0', option: 'disable-powersave'}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # Re-apply plan so changes take effect
+  - !cmd: {command: 'powercfg /SETACTIVE 99999999-9999-9999-9999-999999999999 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+
+  # ==========================================================================

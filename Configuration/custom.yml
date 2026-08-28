@@ -21,7 +21,7 @@
 #   legacy-context-menu, remove-uwp-photos, disable-print, disable-bluetooth,
 #   disable-wu, disable-powersave, remove-onedrive,
 #   disable-hyperv, 7zip
-#   Browser picker: browser-mercury/thorium/brave/firefoxdev/firefox/chrome/edge
+#   Browser picker: browser-mercury/thorium/brave/librewolf/firefox/chrome/edge
 #   Edge is removed via !browser-edge (i.e. unless the user picks Edge)
 #   NOTE: 'akariserv' dropped entirely - remove it from playbook.conf too
 #
@@ -31,8 +31,6 @@
 # ============================================================================
 
 actions:
-
-  # ==========================================================================
   # SECTION 01 - INITIALIZE
   # ==========================================================================
   - !status: {status: 'Initializing'}

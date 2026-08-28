@@ -1,0 +1,16 @@
+  # SECTION 06 - WINDOWS DEFENDER  (toggle: disable-defender)
+  #   AkariV5 method: DISABLE (not delete) so the user can restore later via
+  #   EnableDefender.ps1. Only DisableDefender.ps1 is needed (svchost.ps1 /
+  #   Bitlocker.ps1 dropped - unrelated, and Bitlocker.ps1 had interactive pauses).
+  # ==========================================================================
+  - !status: {status: 'Disabling Windows Defender', option: 'disable-defender'}
+  - !powerShell: {command: '.\DisableDefender.ps1', exeDir: true, runas: currentUserElevated, option: 'disable-defender'}
+  # SmartScreen off (safe regardless of Defender toggle)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer', value: 'SmartScreenEnabled', type: REG_SZ, data: 'Off'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System', value: 'EnableSmartScreen', type: REG_DWORD, data: '0'}
+  # LSA protection off (WinSux)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Lsa', value: 'RunAsPPL', type: REG_DWORD, data: '0'}
+  # Vulnerable driver blocklist off (WinSux)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\CI\Config', value: 'VulnerableDriverBlocklistEnable', type: REG_DWORD, data: '0'}
+
+  # ==========================================================================

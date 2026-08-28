@@ -1,0 +1,9 @@
+  # SECTION 01 - INITIALIZE
+  # ==========================================================================
+  - !status: {status: 'Initializing'}
+  # copy bundled Files\ tree onto the system drive (wallpaper, scripts, etc.)
+  - !cmd: {exeDir: true, command: 'Robocopy Files %SystemDrive%\ /copy:DA /e /nfl /ndl /njh /nc /ns /np >nul'}
+  # disable Smart App Control (blocks unsigned tweak tooling otherwise)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy', value: 'VerifiedAndReputablePolicyState', type: REG_DWORD, data: '0'}
+
+  # ==========================================================================
