@@ -10,7 +10,7 @@ Restructure and audit the AkariOS Windows 11 AME playbook. The project is a mono
 - Integer phases (1, 2, 3, 4): Planned milestone work
 
 - [x] **Phase 1: Network Restructuring** - Strip Section 29 to Vain-only network tweaks, remove FSOS TCP/IP stack additions
-- [ ] **Phase 2: Feature Audit** - Produce a verified feature matrix mapping all 40 sections, cross-check toggles, audit executables and images
+- [x] **Phase 2: Feature Audit** - Produce a verified feature matrix mapping all 40 sections, cross-check toggles, audit executables and images
 - [ ] **Phase 3: Codebase Restructuring** - Decide on modularization approach for monolithic custom.yml, get user approval, implement if approved
 - [ ] **Phase 4: Bug Verification** - Verify NCSI fix, desktop cleanup, and LibreWolf winget install
 
@@ -44,7 +44,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: Produce verified feature matrix and audit all assets
+- [x] 02-01: Produce verified feature matrix and audit all assets
 
 ### Phase 3: Codebase Restructuring
 **Goal**: Decide on modularization approach for the monolithic custom.yml (~1309 lines). Present plan and get user approval before any changes. If approved, create Configuration/sections/ directory and split sections into per-section YAML partials.
@@ -80,11 +80,11 @@ Plans:
 Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Network Restructuring | 1/1 | Complete | 2026-08-28 |
-| 2. Feature Audit | 0/1 | Not started | - |
-| 3. Codebase Restructuring | 0/1 | Not started | - |
-| 4. Bug Verification | 0/1 | Not started | - |
+||-------|----------------|--------|-----------|
+|| 1. Network Restructuring | 1/1 | Complete | 2026-08-28 |
+|| 2. Feature Audit | 1/1 | Complete | 2026-08-28 |
+|| 3. Codebase Restructuring | 0/1 | Not started | - |
+|| 4. Bug Verification | 0/1 | Not started | - |
 
 ## Canonical References
 

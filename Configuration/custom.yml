@@ -201,7 +201,7 @@ actions:
   - !registryValue: {path: 'HKCU\Software\Classes\7-Zip.zip\shell\open\command', value: '', type: REG_SZ, data: '"C:\Program Files\7-Zip\7zFM.exe" "%1"', option: '7zip'}
 
   # ==========================================================================
-  # SECTION 10 - BROWSERS  (Vain set: Mercury, Thorium, Brave, Firefox Dev,
+  # SECTION 10 - BROWSERS  (Vain set: Mercury, Thorium, Brave, LibreWolf,
   #   Firefox, Chrome + Edge). Picker is the 2-page RadioImagePage in
   #   playbook.conf. Edge (browser-edge) installs nothing - it just marks Edge
   #   to be KEPT; Section 15 removes Edge via !browser-edge otherwise.
@@ -264,6 +264,14 @@ actions:
   - !registryValue: {path: 'HKCR\.txt\ShellNew', value: 'ItemName', type: REG_EXPAND_SZ, data: '@%SystemRoot%\System32\notepad.exe,-470'}
   - !registryValue: {path: 'HKCR\.txt\ShellNew', value: 'NullFile', type: REG_SZ, data: ''}
   # Legacy Photo Viewer (UWP Photos kept — useful default app)
+  # Only enable Legacy Photo Viewer associations if user opted to remove UWP Photos
+  - !registryValue: {path: 'HKCR\.jpg\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.jpeg\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.png\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.bmp\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.gif\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.tif\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
+  - !registryValue: {path: 'HKCR\.tiff\OpenWithProgids', value: 'PhotoViewer.JustOpen', type: REG_SZ, data: '', option: 'remove-uwp-photos'}
 
   # ==========================================================================
   # SECTION 13 - WINDOWS FEATURES (DISM)
