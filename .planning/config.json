@@ -1,0 +1,34 @@
+{
+  "project": {
+    "name": "AkariOS V6.1",
+    "code": "akarios",
+    "mode": "standard"
+  },
+  "workflow": {
+    "mode": "interactive",
+    "granularity": "standard",
+    "execution": "sequential",
+    "git_tracking": true,
+    "commit_docs": true
+  },
+  "research": {
+    "research_before_questions": false,
+    "researcher_model": "sonnet",
+    "synthesizer_model": "sonnet",
+    "roadmapper_model": "sonnet"
+  },
+  "workflow_flags": {
+    "nyquist_validation": true,
+    "plan_review": {
+      "source_grounding": true
+    }
+  },
+  "ship": {
+    "pr_body_sections": {
+      "enabled": true,
+      "sources": ["user_stories_acceptance_criteria"],
+      "fallback": "auto",
+      "template": "standard"
+    }
+  }
+}
