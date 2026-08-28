@@ -1,12 +1,1310 @@
 ---
-title: Custom
-description: Custom AkariOS configuration
-privilege: Admin
-actions: 
-- !task: {path: 'AkariOS\tweaks\registry.yml'}
-- !task: {path: 'AkariOS\tweaks\services.yml'}
-- !task: {path: 'AkariOS\tweaks\commands.yml'}
-- !task: {path: 'AkariOS\debloat\components.yml'}
-- !task: {path: 'AkariOS\debloat\appx.yml'}
-- !task: {path: 'AkariOS\tweaks\ScheduledTasks.yml'}
-- !task: {path: 'AkariOS\FinalTasks.yml'}
+# ============================================================================
+#  AkariOS V6 - custom.yml
+#  Monolithic AME playbook (structure based on Vain, logic ported from AkariV5)
+#
+#  Design decisions (see project spec):
+#   1. Defender      : AkariV5 method - DISABLE (restorable via EnableDefender.ps1)
+#   2. Performance   : Vain tweaks + NIC only (NO Vain Governor app/rules/toolbox)
+#                      Power plan + timer resolution from WinSux
+#   3. GPU           : post-install scripts only (DDU + nvidiaProfileInspector)
+#   4. Safety net    : System Restore ON + WinRE ON  (no 'vssadmin delete shadows',
+#                      no 'recoveryenabled no'; create a restore point at the end)
+#   5. Apps          : Vain UI layer + browsers
+#   6. Start/UI      : Vain start menu + UI, NO OpenShell
+#   7. Updates       : PAUSE only (WinSux 365-day method), not disabled
+#   8. Engine        : UseKernelDriver=false, TrustedInstaller level
+#
+#  Feature toggles (must match playbook.conf <Name> values):
+#   disable-defender, disable-uac, disable-process-mitigations,
+#   disable-spectre-meltdown, enable-dark-mode,
+#   legacy-context-menu, remove-uwp-photos, disable-print, disable-bluetooth,
+#   disable-wu, disable-powersave, remove-onedrive,
+#   disable-hyperv, 7zip
+#   Browser picker: browser-mercury/thorium/brave/firefoxdev/firefox/chrome/edge
+#   Edge is removed via !browser-edge (i.e. unless the user picks Edge)
+#   NOTE: 'akariserv' dropped entirely - remove it from playbook.conf too
+#
+#  Build progress:  [x] ALL 40 sections drafted (init -> end)
+#  Pending: Executables\ pass. playbook.conf DONE (2-page browser picker with
+#           Edge; Edge removed via !browser-edge; VPN + akariserv dropped).
+# ============================================================================
+
+actions:
+
+  # ==========================================================================
+  # SECTION 01 - INITIALIZE
+  # ==========================================================================
+  - !status: {status: 'Initializing'}
+  # copy bundled Files\ tree onto the system drive (wallpaper, scripts, etc.)
+  - !cmd: {exeDir: true, command: 'Robocopy Files %SystemDrive%\ /copy:DA /e /nfl /ndl /njh /nc /ns /np >nul'}
+  # disable Smart App Control (blocks unsigned tweak tooling otherwise)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy', value: 'VerifiedAndReputablePolicyState', type: REG_DWORD, data: '0'}
+
+  # ==========================================================================
+  # SECTION 02 - THEME  (toggle: enable-dark-mode)  Ultimate true-black theme:
+  #   dark mode + transparency off + near-black accent (ff191919), black start.
+  # ==========================================================================
+  - !status: {status: 'Applying Black Theme', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'SystemUsesLightTheme', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'AppsUseLightTheme', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'ColorPrevalence', type: REG_DWORD, data: '1', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'EnableTransparency', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', value: 'AppsUseLightTheme', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent', value: 'AccentPalette', type: REG_BINARY, data: '646464006b6b6b00000000000000000000000000000000000000000000000000', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent', value: 'StartColorMenu', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent', value: 'AccentColorMenu', type: REG_DWORD, data: '0', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\DWM', value: 'EnableWindowColorization', type: REG_DWORD, data: '1', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\DWM', value: 'AccentColor', type: REG_DWORD, data: '4279834905', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\DWM', value: 'ColorizationColor', type: REG_DWORD, data: '3289979161', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\DWM', value: 'ColorizationAfterglow', type: REG_DWORD, data: '3289979161', option: 'enable-dark-mode'}
+  - !registryValue: {path: 'HKCU\Control Panel\Colors', value: 'Background', type: REG_SZ, data: '0 0 0', option: 'enable-dark-mode'}
+
+  # ==========================================================================
+  # SECTION 03 - POWERSHELL CONFIG
+  # ==========================================================================
+  - !status: {status: 'Configuring PowerShell'}
+  - !cmd: {command: 'setx POWERSHELL_TELEMETRY_OPTOUT 1 >nul'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell', value: 'ExecutionPolicy', type: REG_SZ, data: 'Unrestricted'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging', value: 'EnableModuleLogging', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging', value: 'EnableScriptBlockLogging', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging', value: 'EnableScriptBlockInvocationLogging', type: REG_DWORD, data: '0'}
+  # run .ps1 by double-click + run as admin (vain)
+  - !cmd: {command: 'ftype Microsoft.PowerShellScript.1="%systemroot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -EP Unrestricted -File "%1" %* >nul'}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellScript.1\Shell', value: '', type: REG_SZ, data: 'Open'}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellScript.1\Shell\Open\Command', value: '', type: REG_EXPAND_SZ, data: '"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" "%1"'}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellScript.1\Shell\RunAs', value: 'HasLUAShield', type: REG_SZ, data: ''}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellScript.1\Shell\RunAs\Command', value: '', type: REG_EXPAND_SZ, data: '"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" "%1"'}
+  # .psm1 association (vain)
+  - !registryValue: {path: 'HKCR\.psm1', value: '', type: REG_SZ, data: 'Microsoft.PowerShellModule.1'}
+  - !registryValue: {path: 'HKCR\Microsoft.PowerShellModule.1\Shell', value: '', type: REG_SZ, data: 'Open'}
+  - !registryKey: {path: 'HKCR\.psm1\OpenWithProgids'}
+  - !registryKey: {path: 'HKCR\.ps1\OpenWithProgids'}
+
+  # ==========================================================================
+  # SECTION 04 - NGEN  (precompile .NET assemblies)
+  # ==========================================================================
+  - !status: {status: 'Installing NGEN'}
+  - !powerShell: {command: '$env:PATH = [Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory() + '';'' + $env:PATH; foreach($a in [AppDomain]::CurrentDomain.GetAssemblies()){ if($a.Location){ ngen install $a.Location /nologo 2>&1 | Out-Null } }'}
+
+  # ==========================================================================
+  # SECTION 05 - NOTIFICATIONS
+  # ==========================================================================
+  - !status: {status: 'Disabling Notifications'}
+  - !service: {name: 'WpnService', operation: change, startup: 4}
+  - !service: {name: 'WpnService', operation: stop}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\PushNotifications', value: 'ToastEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications', value: 'NoCloudApplicationNotification', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userNotificationListener', value: 'Value', type: REG_SZ, data: 'Deny'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings', value: 'NOC_GLOBAL_SETTING_ALLOW_NOTIFICATION_SOUND', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings', value: 'NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings', value: 'NOC_GLOBAL_SETTING_ALLOW_CRITICAL_TOASTS_ABOVE_LOCK', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'ShowSyncProviderNotifications', type: REG_DWORD, data: '0'}
+  # Additional notification suppression (FSOS)
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings', value: 'NOC_GLOBAL_SETTING_TOASTS_ENABLED', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings', value: 'NOC_GLOBAL_SETTING_BADGE_ENABLED', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications', value: 'NoTileApplicationNotification', type: REG_DWORD, data: '1'}
+
+  # ==========================================================================
+  # SECTION 06 - WINDOWS DEFENDER  (toggle: disable-defender)
+  #   AkariV5 method: DISABLE (not delete) so the user can restore later via
+  #   EnableDefender.ps1. Only DisableDefender.ps1 is needed (svchost.ps1 /
+  #   Bitlocker.ps1 dropped - unrelated, and Bitlocker.ps1 had interactive pauses).
+  # ==========================================================================
+  - !status: {status: 'Disabling Windows Defender', option: 'disable-defender'}
+  - !powerShell: {command: '.\DisableDefender.ps1', exeDir: true, runas: currentUserElevated, option: 'disable-defender'}
+  # SmartScreen off (safe regardless of Defender toggle)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer', value: 'SmartScreenEnabled', type: REG_SZ, data: 'Off'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System', value: 'EnableSmartScreen', type: REG_DWORD, data: '0'}
+  # LSA protection off (WinSux)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Lsa', value: 'RunAsPPL', type: REG_DWORD, data: '0'}
+  # Vulnerable driver blocklist off (WinSux)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\CI\Config', value: 'VulnerableDriverBlocklistEnable', type: REG_DWORD, data: '0'}
+
+  # ==========================================================================
+  # SECTION 07 - USER ACCOUNT CONTROL  (toggle: disable-uac)
+  # ==========================================================================
+  - !status: {status: 'Disabling UAC', option: 'disable-uac'}
+  - !service: {name: 'luafv', operation: change, startup: 4, option: 'disable-uac'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'EnableLUA', type: REG_DWORD, data: '0', option: 'disable-uac'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'PromptOnSecureDesktop', type: REG_DWORD, data: '0', option: 'disable-uac'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'ConsentPromptBehaviorAdmin', type: REG_DWORD, data: '0', option: 'disable-uac'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'ValidateAdminCodeSignatures', type: REG_DWORD, data: '0', option: 'disable-uac'}
+  # allow password sign-in (WinSux)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device', value: 'DevicePasswordLessBuildVersion', type: REG_DWORD, data: '0'}
+
+  # ==========================================================================
+  # SECTION 08 - SOFTWARE / RUNTIMES  (VC++ redists + DirectX)
+  # ==========================================================================
+  - !status: {status: 'Installing VC Redist 2005'}
+  - !download: {url: 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x86.EXE', destination: '%temp%\2005_86.exe', overwrite: true}
+  - !download: {url: 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x64.EXE', destination: '%temp%\2005_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2005_86.exe" /Q /C /T:%temp%\2005_86', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2005_64.exe" /Q /C /T:%temp%\2005_64', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2005_86\vcredist.msi" /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2005_64\vcredist.msi" /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !file: {path: '%temp%\2005_86'}
+  - !file: {path: '%temp%\2005_64'}
+
+  - !status: {status: 'Installing VC Redist 2008'}
+  - !download: {url: 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe', destination: '%temp%\2008_86.exe', overwrite: true}
+  - !download: {url: 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe', destination: '%temp%\2008_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2008_86.exe" /q', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2008_64.exe" /q', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing VC Redist 2010'}
+  - !download: {url: 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe', destination: '%temp%\2010_86.exe', overwrite: true}
+  - !download: {url: 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe', destination: '%temp%\2010_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2010_86.exe" /q', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2010_64.exe" /q', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing VC Redist 2012'}
+  - !download: {url: 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe', destination: '%temp%\2012_86.exe', overwrite: true}
+  - !download: {url: 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe', destination: '%temp%\2012_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2012_86.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2012_64.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing VC Redist 2013'}
+  - !download: {url: 'https://aka.ms/highdpimfc2013x86enu', destination: '%temp%\2013_86.exe', overwrite: true}
+  - !download: {url: 'https://aka.ms/highdpimfc2013x64enu', destination: '%temp%\2013_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2013_86.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2013_64.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing VC Redist 2015-2022'}
+  - !download: {url: 'https://aka.ms/vs/17/release/vc_redist.x86.exe', destination: '%temp%\2015_2022_86.exe', overwrite: true}
+  - !download: {url: 'https://aka.ms/vs/17/release/vc_redist.x64.exe', destination: '%temp%\2015_2022_64.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\2015_2022_86.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\2015_2022_64.exe" /install /quiet /norestart', runas: currentUserElevated, wait: true}
+
+  - !status: {status: 'Installing DirectX'}
+  - !download: {url: 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe', destination: '%temp%\DirectX.exe', overwrite: true}
+  - !cmd: {command: '"%temp%\DirectX.exe" /Q /C /T:%temp%\DirectX', runas: currentUserElevated, wait: true}
+  - !cmd: {command: '"%temp%\DirectX\DXSETUP.exe" /silent', runas: currentUserElevated, wait: true}
+  - !file: {path: '%temp%\DirectX'}
+
+  # ==========================================================================
+  # SECTION 09 - 7-ZIP  (toggle: 7zip)
+  #   Install latest x64 from GitHub + core config/associations.
+  #   (Full per-extension association list from Vain can be expanded later.)
+  # ==========================================================================
+  - !status: {status: 'Installing 7-Zip', option: '7zip'}
+  - !download: {git: 'https://github.com/ip7z/7zip', regex: '^7z.*-x64\.exe$', destination: '%temp%\7Zip.exe', overwrite: true, option: '7zip'}
+  - !cmd: {command: '"%temp%\7Zip.exe" /S', runas: currentUserElevated, wait: true, option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\7-Zip\Options', value: 'ContextMenu', type: REG_DWORD, data: '4903', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.7z', value: '', type: REG_SZ, data: '7-Zip.7z', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.zip', value: '', type: REG_SZ, data: '7-Zip.zip', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.rar', value: '', type: REG_SZ, data: '7-Zip.rar', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.tar', value: '', type: REG_SZ, data: '7-Zip.tar', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.gz', value: '', type: REG_SZ, data: '7-Zip.gz', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\.iso', value: '', type: REG_SZ, data: '7-Zip.iso', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\7-Zip.7z\shell\open\command', value: '', type: REG_SZ, data: '"C:\Program Files\7-Zip\7zFM.exe" "%1"', option: '7zip'}
+  - !registryValue: {path: 'HKCU\Software\Classes\7-Zip.zip\shell\open\command', value: '', type: REG_SZ, data: '"C:\Program Files\7-Zip\7zFM.exe" "%1"', option: '7zip'}
+
+  # ==========================================================================
+  # SECTION 10 - BROWSERS  (Vain set: Mercury, Thorium, Brave, Firefox Dev,
+  #   Firefox, Chrome + Edge). Picker is the 2-page RadioImagePage in
+  #   playbook.conf. Edge (browser-edge) installs nothing - it just marks Edge
+  #   to be KEPT; Section 15 removes Edge via !browser-edge otherwise.
+  #   Taskbar-pin binaries omitted (fragile per-user blobs) - installs only.
+  # ==========================================================================
+  - !status: {status: 'Installing Mercury', option: 'browser-mercury'}
+  - !download: {git: 'https://github.com/Alex313031/Mercury', regex: '^mercury.*win64.*AVX2.*.exe$', destination: '%temp%\Mercury.exe', overwrite: true, option: 'browser-mercury'}
+  - !cmd: {command: '"%temp%\Mercury.exe" /S', runas: currentUserElevated, option: 'browser-mercury'}
+
+  - !status: {status: 'Installing Thorium', option: 'browser-thorium'}
+  - !download: {git: 'https://github.com/Alex313031/Thorium-Win', regex: '^thorium_AVX2_mini_installer\.exe$', destination: '%temp%\Thorium.exe', overwrite: true, option: 'browser-thorium'}
+  - !cmd: {command: '"%temp%\Thorium.exe" --silent --system-level --do-not-launch-chrome', runas: currentUserElevated, option: 'browser-thorium'}
+
+  - !status: {status: 'Installing Brave', option: 'browser-brave'}
+  - !download: {url: 'https://laptop-updates.brave.com/latest/winx64', destination: '%temp%\Brave.exe', overwrite: true, option: 'browser-brave'}
+  - !cmd: {command: '"%temp%\Brave.exe" /silent /install', runas: currentUserElevated, option: 'browser-brave'}
+
+  - !status: {status: 'Installing LibreWolf', option: 'browser-librewolf'}
+  - !run: {exe: 'winget', args: 'install -e --id LibreWolf.LibreWolf --silent --accept-package-agreements --accept-source-agreements', runas: currentUserElevated, option: 'browser-librewolf'}
+
+  - !status: {status: 'Installing Firefox', option: 'browser-firefox'}
+  - !download: {url: 'https://download.mozilla.org/?product=firefox-latest&os=win64&lang=en-US', destination: '%temp%\Firefox.exe', overwrite: true, option: 'browser-firefox'}
+  - !cmd: {command: '"%temp%\Firefox.exe" /S', runas: currentUserElevated, option: 'browser-firefox'}
+
+  - !status: {status: 'Installing Chrome', option: 'browser-chrome'}
+  - !download: {url: 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi', destination: '%temp%\Chrome.msi', overwrite: true, option: 'browser-chrome'}
+  - !cmd: {command: '"%temp%\Chrome.msi" /quiet /norestart', runas: currentUserElevated, option: 'browser-chrome'}
+
+  # ==========================================================================
+  # SECTION 11 - START MENU / SEARCH  (Vain tweaks, NO OpenShell)
+  # ==========================================================================
+  - !status: {status: 'Configuring Start Menu'}
+  - !service: {name: 'wsearch', operation: change, startup: 4}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'BingSearchEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\SearchSettings', value: 'IsDeviceSearchHistoryEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search', value: 'ConnectedSearchUseWeb', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search', value: 'DisableWebSearch', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search', value: 'EnableDynamicContentInWSB', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer', value: 'DisableSearchBoxSuggestions', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'SearchboxTaskbarMode', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings', value: 'IsDynamicSearchBoxEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer', value: 'NoStartMenuMFUprogramsList', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer', value: 'HideRecentlyAddedApps', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer', value: 'HideRecommendedPersonalizedSites', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'Start_IrisRecommendations', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'Start_AccountNotifications', type: REG_DWORD, data: '0'}
+  # Cloud search / safe-search toggles (FSOS phase3)
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings', value: 'SafeSearchMode', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings', value: 'IsAADCloudSearchEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings', value: 'IsMSACloudSearchEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings', value: 'IsMSFTCloudSearchEnabled', type: REG_DWORD, data: '0'}
+
+  # ==========================================================================
+  # SECTION 12 - LEGACY NOTEPAD  +  LEGACY PHOTO VIEWER (toggle: remove-uwp-photos)
+  # ==========================================================================
+  - !status: {status: 'Restoring legacy Notepad'}
+  - !registryKey: {path: 'HKCR\*\OpenWithList\notepad.exe', operation: 'add'}
+  - !registryValue: {path: 'HKCR\Applications\notepad.exe', value: 'NoOpenWith', operation: 'delete'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Notepad', value: 'ShowStoreBanner', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCR\.txt\ShellNew', value: 'ItemName', type: REG_EXPAND_SZ, data: '@%SystemRoot%\System32\notepad.exe,-470'}
+  - !registryValue: {path: 'HKCR\.txt\ShellNew', value: 'NullFile', type: REG_SZ, data: ''}
+  # Legacy Photo Viewer (UWP Photos kept — useful default app)
+
+  # ==========================================================================
+  # SECTION 13 - WINDOWS FEATURES (DISM)
+  # ==========================================================================
+  - !status: {status: 'Enabling DirectPlay'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Enable-Feature /FeatureName:"DirectPlay" /NoRestart /All'}
+  - !status: {status: 'Disabling StepsRecorder'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Remove-Capability /CapabilityName:"App.StepsRecorder~~~~0.0.1.0" /NoRestart'}
+  - !status: {status: 'Disabling Legacy Media Player'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"WindowsMediaPlayer" /NoRestart'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"MediaPlayback" /NoRestart'}
+  - !status: {status: 'Disabling SMBDirect'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"SMBDirect" /NoRestart'}
+  - !status: {status: 'Disabling Workfolders Client'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"Workfolders-client" /NoRestart'}
+  - !status: {status: 'Disabling WCF services & portsharing'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"WCF-Services45" /NoRestart'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"WCF-TCP-PortSharing45" /NoRestart'}
+
+  # ==========================================================================
+  # SECTION 14 - ONEDRIVE  (toggle: remove-onedrive)
+  # ==========================================================================
+  - !status: {status: 'Removing OneDrive', option: 'remove-onedrive'}
+  - !taskKill: {name: 'OneDrive*', ignoreErrors: true, option: 'remove-onedrive'}
+  - !cmd: {command: 'OneDriveSetup /uninstall', runas: currentUserElevated, wait: true, option: 'remove-onedrive'}
+  - !service: {name: 'OneSyncSvc*', operation: delete, option: 'remove-onedrive'}
+  - !file: {path: '%ProgramData%\Microsoft OneDrive', option: 'remove-onedrive'}
+  - !file: {path: '%UserProfile%\OneDrive', option: 'remove-onedrive'}
+  - !file: {path: '%LocalAppdata%\Microsoft\OneDrive', option: 'remove-onedrive'}
+  - !file: {path: '%SystemRoot%\System32\OneDriveSetup.exe', option: 'remove-onedrive'}
+  - !file: {path: '%SystemRoot%\SysWOW64\OneDriveSetup.exe', option: 'remove-onedrive'}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\OneDrive', option: 'remove-onedrive'}
+  - !registryValue: {path: 'HKCU\Environment', value: 'OneDrive', operation: 'delete', option: 'remove-onedrive'}
+  - !powerShell: {command: "Get-ScheduledTask | Where-Object { $_.TaskName -like '*Oned*' } | ForEach-Object { Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false }", runas: currentUserElevated, wait: true, option: 'remove-onedrive'}
+
+  # ==========================================================================
+  # SECTION 15 - MICROSOFT EDGE  (vain model: gated on !browser-edge)
+  #   Edge is a choice on the browser picker. If the user does NOT pick Edge
+  #   (browser-edge), Edge is removed. Full teardown ported from Vain.
+  # ==========================================================================
+  - !status: {status: 'Removing Microsoft Edge', option: '!browser-edge'}
+  - !service: {name: 'edgeupdate', operation: delete, option: '!browser-edge'}
+  - !service: {name: 'edgeupdatem', operation: delete, option: '!browser-edge'}
+  - !service: {name: 'MicrosoftEdgeElevationService', operation: delete, option: '!browser-edge'}
+  - !file: {path: '%ProgramFiles(x86)%\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !file: {path: '%ProgramFiles(x86)%\Microsoft\EdgeCore', option: '!browser-edge'}
+  - !file: {path: '%ProgramFiles(x86)%\Microsoft\Edge', option: '!browser-edge'}
+  - !file: {path: '%ProgramFiles(x86)%\Microsoft\EdgeWebView', option: '!browser-edge'}
+  - !file: {path: '%LocalAppdata%\Microsoft\Edge', option: '!browser-edge'}
+  - !file: {path: '%ProgramData%\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !file: {path: '%SystemRoot%\system32\Tasks\MicrosoftEdge*', option: '!browser-edge'}
+  - !file: {path: '%ProgramData%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk', option: '!browser-edge'}
+  - !file: {path: '%SystemDrive%\Users\Public\Desktop\Microsoft Edge.lnk', option: '!browser-edge'}
+  - !file: {path: '%Appdata%\Microsoft\Internet Explorer\Quick Launch\Microsoft Edge.lnk', option: '!browser-edge'}
+  - !file: {path: '%Appdata%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Microsoft Edge.lnk', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\edgeupdate', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\edgeupdatem', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCR\microsoft-edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCR\MSEdgeHTM', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCR\MSEdgeMHT', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCR\MSEdgePDF', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\Active Setup\Installed Components\{9459C573-B17A-45AE-9F64-1857B5D58CEE}', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Clients\StartMenuInternet\Microsoft Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\Active Setup\Installed Components\{9459C573-B17A-45AE-9F64-1857B5D58CEE}', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge', option: '!browser-edge'}
+  - !registryValue: {path: 'HKCR\.html\OpenWithProgIds', value: 'MSEdgeHTM', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKCR\.htm\OpenWithProgIds', value: 'MSEdgeHTM', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKCR\.pdf\OpenWithProgIds', value: 'MSEdgePDF', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKCU\Software\RegisteredApplications', value: 'Microsoft Edge', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\RegisteredApplications', value: 'Microsoft Edge', operation: 'delete', option: '!browser-edge'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\EdgeUpdate', value: 'IsEdgeStableUninstalled', type: REG_DWORD, data: '1', option: '!browser-edge'}
+  # WOW6432Node mirror
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Clients\StartMenuInternet\Microsoft Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Microsoft\Edge', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe', option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge', option: '!browser-edge'}
+  # appx + update tasks
+  - !appx: {name: '*Edge.GameAssist*', option: '!browser-edge'}
+  - !appx: {name: '*MicrosoftEdgeDevToolsClient*', option: '!browser-edge'}
+  - !appx: {name: '*MicrosoftEdge.Stable*', option: '!browser-edge'}
+  - !powerShell: {command: "Get-ScheduledTask | Where-Object { $_.TaskName -like '*MicrosoftEdgeUpdate*' } | ForEach-Object { Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false }", runas: currentUserElevated, wait: true, option: '!browser-edge'}
+  - !registryKey: {path: 'HKLM\SOFTWARE\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\EdgeUpdate', operation: 'delete', option: '!browser-edge'}
+  - !powerShell: {command: "Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' | % { $_.PSObject.Properties | ? { $_.Name -like 'MicrosoftEdge*' } | % { Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name $_.Name } }", runas: currentUserElevated, wait: true, option: '!browser-edge'}
+
+  # ==========================================================================
+  # SECTION 16 - APPX DEBLOAT  (explicit allowlist style - ported from AkariV5)
+  #
+  #   KEEP (deliberately NOT removed - load-bearing or wanted):
+  #     * Microsoft.WindowsTerminal      <- keeps CTRL+C/V + modern console
+  #     * Microsoft.WindowsStore         <- app installs
+  #     * Microsoft.DesktopAppInstaller  <- winget
+  #     * Microsoft.WindowsNotepad       <- default editor
+  #     * Microsoft.Paint                <- keep for everyday users
+  #     * Microsoft.SecHealthUI          <- Defender UI (breaks if removed)
+  #     * StartMenuExperienceHost / ShellExperienceHost / immersivecontrolpanel
+  #     * *CBS*, video/image extensions  <- explorer + media stability
+  #     * Xbox GamingApp + IdentityProvider (kept for Game Pass gamers)
+  #   Only the explicitly listed packages below are removed.
+  # ==========================================================================
+  - !status: {status: 'Removing AppX Packages'}
+  - !appx: {name: '*Disney*', type: family}
+  - !appx: {name: '*Spotify*', type: family}
+  - !appx: {name: '*SpotifyMusic*', type: family}
+  - !appx: {name: '*SecureAssessmentBrowser*', type: family}
+  - !appx: {name: '*PeopleExperienceHost*', type: family}
+  - !appx: {name: '*Microsoft.People*', type: family}
+  - !appx: {name: '*Microsoft.WindowsCamera*', type: family}
+  - !appx: {name: '*Microsoft.WindowsAlarms*', type: family}
+  - !appx: {name: '*Microsoft.WindowsMaps*', type: family}
+  - !appx: {name: '*Microsoft.MicrosoftStickyNotes*', type: family}
+  - !appx: {name: '*Microsoft.BingNews*', type: family}
+  - !appx: {name: '*Microsoft.BingWeather*', type: family}
+  - !appx: {name: '*BingSearch*', type: family}
+  - !appx: {name: '*Microsoft.MicrosoftSolitaireCollection*', type: family}
+  - !appx: {name: '*Microsoft.WindowsFeedbackHub*', type: family}
+  - !appx: {name: '*Microsoft.GetHelp*', type: family}
+  - !appx: {name: '*Microsoft.Getstarted*', type: family}
+  - !appx: {name: '*Microsoft.Todos*', type: family}
+  - !appx: {name: '*Microsoft.PowerAutomateDesktop*', type: family}
+  - !appx: {name: '*Microsoft.549981C3F5F10*', type: family}
+  - !appx: {name: '*MicrosoftCorporationII.QuickAssist*', type: family}
+  - !appx: {name: '*MicrosoftCorporationII.MicrosoftFamily*', type: family}
+  - !appx: {name: '*Microsoft.ZuneVideo*', type: family}
+  - !appx: {name: '*Microsoft.WindowsSoundRecorder*', type: family}
+  - !appx: {name: '*Clipchamp.Clipchamp*', type: family}
+  - !appx: {name: '*Microsoft.Whiteboard*', type: family}
+  - !appx: {name: '*microsoft.microsoftskydrive*', type: family}
+  - !appx: {name: '*Microsoft.MicrosoftPowerBIForWindows*', type: family}
+  - !appx: {name: '*Microsoft.SkypeApp*', type: family}
+  - !appx: {name: '*Microsoft.MicrosoftOfficeHub*', type: family}
+  - !appx: {name: '*Microsoft.Office.OneNote*', type: family}
+  - !appx: {name: '*OutlookForWindows*', type: family}
+  - !appx: {name: '*OutlookPWA*', type: family}
+  - !appx: {name: '*Microsoft.Microsoft3DViewer*', type: family}
+  - !appx: {name: 'Microsoft.Advertising*', type: family}
+  - !appx: {name: '*MixedReality.Portal*', type: family}
+  - !appx: {name: '*DevHome*', type: family}
+  - !appx: {name: '*Flipgrid*', type: family}
+  - !appx: {name: '*Microsoft.YourPhone*', type: family}
+  - !appx: {name: '*MicrosoftWindows.CrossDevice*', type: family}
+  - !appx: {name: '*Microsoft.Windows.Ai.Copilot*', type: family}
+  - !appx: {name: '*Microsoft.Copilot*', type: family}
+  - !appx: {name: '*Windows.Client.CoreAI*', type: family}
+  - !appx: {name: '*MicrosoftWindows.Client.AIX*', type: family, weight: 10}
+  # Copilot policy off (Ultimate) - durable, survives appx regeneration
+  - !registryValue: {path: 'HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot', value: 'TurnOffWindowsCopilot', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot', value: 'TurnOffWindowsCopilot', type: REG_DWORD, data: '1'}
+  # Teams (kill process first, then remove installed + provisioned)
+  - !taskKill: {name: '*teams*', ignoreErrors: true}
+  - !appx: {name: '*MicrosoftTeams*', type: family}
+  - !appx: {name: '*MSTeams*', type: family, weight: 10}
+  # Communications apps (leaves taskbar leftovers unless removed via PS)
+  - !powerShell: {command: 'Get-AppxPackage *windowscommunicationsapps* | Remove-AppxPackage', runas: currentUserElevated, errorAction: Ignore}
+  - !appx: {name: '*microsoft.windowscommunicationsapps*', type: family, weight: 10}
+  # Web experience / widgets
+  - !powerShell: {command: 'Get-AppxPackage MicrosoftWindows.Client.WebExperience | Remove-AppxPackage', runas: currentUserElevated, errorAction: Ignore}
+  - !appx: {name: '*WebExperienceHost*', type: app, unregister: true}
+  # Windows Backup
+  - !appx: {name: '*WindowsBackup*', type: app, unregister: true, weight: 10}
+  # Ensure provisioned copies of the big offenders don't return for new users
+  - !powerShell: {command: 'Get-AppxPackage Microsoft.YourPhone* | Remove-AppxPackage; Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq ''Microsoft.YourPhone'' } | Remove-AppxProvisionedPackage -Online', runas: currentUserElevated, wait: true, errorAction: Ignore}
+  - !powerShell: {command: 'Get-AppxPackage MicrosoftTeams* | Remove-AppxPackage; Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq ''MicrosoftTeams'' } | Remove-AppxProvisionedPackage -Online', runas: currentUserElevated, wait: true, errorAction: Ignore}
+  # Extra appx entries from vain (internal/hidden packages)
+  - !appx: {name: '*ContentDeliveryManager*', type: family}
+  - !appx: {name: '*Microsoft.ECApp*', type: family}
+  - !appx: {name: '*Microsoft.Lockapp*', type: family}
+  - !appx: {name: '*Microsoft.BioEnrollment*', type: family}
+  - !appx: {name: '*c5e2524a-ea46-4f67-841f-6a9465d9d515*', type: family}
+  - !appx: {name: '*F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE*', type: family}
+  - !appx: {name: '*NarratorQuickStart*', type: family}
+  - !appx: {name: '*AsyncTextService*', type: family}
+  - !appx: {name: '*XGpuEjectDialog*', type: family}
+  - !appx: {name: '*ParentalControls*', type: family}
+  - !appx: {name: '*Microsoft.Windows.CallingShellApp*', type: family}
+  - !appx: {name: '*CredDialogHost*', type: family}
+  - !appx: {name: '*PinningConfirmationDialog*', type: family}
+  - !appx: {name: '*client.oobe*', type: family}
+  - !appx: {name: '*client.photon*', type: family}
+  - !appx: {name: '*OOBENetworkCaptivePortal*', type: family}
+  - !appx: {name: '*OOBENetworkConnectionFlow*', type: family}
+  - !appx: {name: '*CapturePicker*', type: family}
+  - !appx: {name: '*WidgetsPlatformRuntime*', type: family}
+  - !appx: {name: '*MicrosoftWindows.LKG.DesktopSpotlight*', type: family}
+  - !appx: {name: '*MicrosoftWindows.LKG.IrisService*', type: family}
+  - !appx: {name: '*MicrosoftWindows.LKG.SpeechRuntime*', type: family}
+  - !appx: {name: 'MicrosoftWindows.LKG.AccountsService*', type: family}
+  - !appx: {name: 'MicrosoftWindows.LKG.RulesEngine*', type: family}
+  - !appx: {name: 'MicrosoftWindows.LKG.TwinSxS*', type: family}
+  - !appx: {name: 'MicrosoftWindows.LKG.Search*', type: family}
+  - !appx: {name: '*Livtop*', type: family}
+  - !appx: {name: '*InpApp*', type: family}
+  - !appx: {name: '*Speion*', type: family}
+  - !appx: {name: '*Voiess*', type: family}
+  - !appx: {name: '*Filons*', type: family}
+  - !appx: {name: '*DesktopSpotlight*', type: app}
+  - !appx: {name: '*IrisService*', type: app}
+  - !appx: {name: '*CopilotNudges*', type: app}
+  - !appx: {name: '*CrossDeviceResume*', type: app}
+  - !appx: {name: '*CrossDeviceResumeApp*', type: app}
+  - !appx: {name: '*FamilyValueProp*', type: app}
+  - !appx: {name: '*PackageMetadata', type: app}
+  - !appx: {name: '*Global.AppListBackup*', type: app}
+  - !appx: {name: '*Global.DesktopStickerEditor*', type: app}
+  - !appx: {name: '*DesktopStickerEditorCentennial*', type: app}
+  - !appx: {name: '*Global.DesktopVisual*', type: app}
+  - !appx: {name: '*Global.LiveCaptionsDesktop*', type: app}
+  - !appx: {name: '*LogonWebHost*', type: app}
+  - !appx: {name: '*VisualAssist*', type: app}
+  - !appx: {name: '*Global.FeatureDiscoverability*', type: app}
+  - !appx: {name: '*Global.MicrosoftGraphRecentItemsManager*', type: app}
+  - !appx: {name: '*Global.PersonaCardManager*', type: app}
+  - !appx: {name: '*Global.RulesEngine*', type: app}
+  - !appx: {name: '*Global.WindowsMigration*', type: app}
+  - !appx: {name: '*MiniSearchUI*', type: app}
+  - !appx: {name: '*FESearchUI*', type: app}
+  - !appx: {name: '*Global.SpeechRecognizerExtension*', type: app}
+  - !appx: {name: '*Global.TwinSxS*', type: app}
+  - !appx: {name: '*Global.SpeechSynthesizerExtension*', type: app}
+  - !appx: {name: '*Global.ValueBanner*', type: app}
+  - !appx: {name: '*Global.WindowsPeopleExperience*', type: app}
+  - !appx: {name: '*Global.ExperienceExtensions*', type: app}
+  - !appx: {name: '*Global.WsxPackManager*', type: app}
+  - !appx: {name: '*Global.BackupBanner*', type: app}
+  - !appx: {name: '*Global.VoiceAccessHost*', type: app}
+  - !appx: {name: '*Global.VoiceAccessPlugin*', type: app}
+  - !appx: {name: '*Global.DragTray*', type: app}
+  - !appx: {name: '*Global.LockCanvas*', type: app}
+  - !appx: {name: '*Global.WidgetDataModel*', type: app}
+  - !appx: {name: '*Global.WidgetPicker*', type: app}
+  - !appx: {name: '*Global.WidgetViewUWP*', type: app}
+  - !appx: {name: '*Global.WidgetViewWinUI3*', type: app}
+  - !appx: {name: '*Global.wsw*', type: app}
+  - !appx: {name: '*ActionRuntime*', type: app}
+  - !appx: {name: '*Global.ActionUI*', type: app}
+  - !appx: {name: '*Global.ActionUi.Common*', type: app}
+  - !appx: {name: '*SoftLanding*', type: app}
+  - !appx: {name: '*DiscoveryHub*', type: app}
+  - !appx: {name: '*DiscoveryHubWidgetHost*', type: app}
+  - !appx: {name: '*Global.PeopleExperiencePlatform*', type: app}
+  - !appx: {name: '*Global.PeopleWidget*', type: app}
+  - !appx: {name: '*Global.WindowsPersonaCard*', type: app}
+  - !appx: {name: '*Global.AccountDialog*', type: app}
+  - !appx: {name: '*Global.Accounts*', type: app}
+  - !appx: {name: '*SettingsModelService*', type: app}
+  # Clear cached app state — this wipes the Start menu pin layout (start2.bin equivalent)
+  - !appx: {operation: clearCache, name: '*MicrosoftWindows.Client.CBS*'}
+  - !appx: {operation: clearCache, name: '*Microsoft.Windows.Search*'}
+  - !appx: {operation: clearCache, name: '*Microsoft.Windows.SecHealthUI*'}
+  - !appx: {operation: clearCache, name: '*StartMenuExperienceHost*'}
+
+  # ==========================================================================
+  # SECTION 17 - SERVICES  (general + telemetry)
+  #   SAFETY-NET AUDIT: VSS, swprv, volsnap, sdrsvc, wbengine and the
+  #   SystemRestore service are intentionally NOT disabled here, so that
+  #   System Restore keeps working (see Section 37). Only vmicvss (Hyper-V
+  #   guest VSS) is touched, and only in the Hyper-V section.
+  #   Printing services -> Section 18 ; power-saving services -> Section 33.
+  # ==========================================================================
+  - !status: {status: 'Configuring Services'}
+  # General
+  - !service: {name: 'BDESVC', operation: change, startup: 4}            # BitLocker
+  - !service: {name: 'CldFlt', operation: change, startup: 4}            # Cloud Files Filter
+  - !service: {name: 'UCPD', operation: change, startup: 4}              # User Choice Protection Driver
+  - !service: {name: 'onesyncsvc', operation: change, startup: 4}        # Sync Host
+  - !service: {name: 'ShellHWDetection', operation: change, startup: 4}
+  - !service: {name: 'sysmain', operation: change, startup: 4}
+  - !service: {name: 'themes', operation: change, startup: 4}
+  - !service: {name: 'Beep', operation: change, startup: 4}
+  - !service: {name: 'CloudIdSvc', operation: change, startup: 4}
+  - !service: {name: 'WPCMonSvc', operation: change, startup: 4}         # Parental Controls
+  - !service: {name: 'MapsBroker', operation: change, startup: 4}
+  - !service: {name: 'CloudBackupRestoreSvc', operation: change, startup: 4}
+  - !service: {name: 'fhsvc', operation: change, startup: 4}             # File History (NOT System Restore)
+  - !service: {name: 'semgrsvc', operation: change, startup: 4}          # Payments / NFC
+  - !service: {name: 'wisvc', operation: change, startup: 4}             # Windows Insider
+  # Telemetry / Reporting
+  - !service: {name: 'Telemetry', operation: change, startup: 4}
+  - !service: {name: 'WdiSystemHost', operation: change, startup: 4}
+  - !service: {name: 'WdiServiceHost', operation: change, startup: 4}
+  - !service: {name: 'troubleshootingsvc', operation: change, startup: 4}
+  - !service: {name: 'diagnosticshub.standardcollector.service', operation: change, startup: 4}
+  - !service: {name: 'diagsvc', operation: change, startup: 4}
+  - !service: {name: 'intelpmt', operation: change, startup: 4}
+  - !service: {name: 'pla', operation: change, startup: 4}
+  - !service: {name: 'WerSvc', operation: change, startup: 4}
+  - !service: {name: 'svsvc', operation: change, startup: 4}
+  - !service: {name: 'diagtrack', operation: change, startup: 4}         # DiagTrack (telemetry)
+  - !service: {name: 'wercplsupport', operation: change, startup: 4}
+  - !service: {name: 'Wecsvc', operation: change, startup: 4}
+  - !service: {name: 'dps', operation: change, startup: 4}
+  - !service: {name: 'pcasvc', operation: change, startup: 4}
+  - !service: {name: 'dusmsvc', operation: change, startup: 4}
+  - !service: {name: 'ndu', operation: change, startup: 4}
+  - !service: {name: 'DSSvc', operation: change, startup: 4}             # Data Sharing (NOT restore)
+  # Additional services (FSOS phase3)
+  - !service: {name: 'dmwappushservice', operation: change, startup: 4}    # WAP push (telemetry relay)
+  - !service: {name: 'CDPUserSvc', operation: change, startup: 4}          # Connected Devices Platform
+  - !service: {name: 'lmhosts', operation: change, startup: 4}             # NetBIOS name resolution
+  - !service: {name: 'TrkWks', operation: change, startup: 4}              # Distributed Link Tracking
+  - !service: {name: 'RetailDemo', operation: change, startup: 4}
+  - !service: {name: 'WMPNetworkSvc', operation: change, startup: 4}       # WMP Network Sharing
+  - !service: {name: 'DialogBlockingService', operation: change, startup: 4}
+  - !service: {name: 'AssignedAccessManagerSvc', operation: change, startup: 4}
+  - !service: {name: 'AppVClient', operation: change, startup: 4}          # App Virtualization
+  - !service: {name: 'DevQueryBroker', operation: change, startup: 4}
+  - !service: {name: 'WSAIFabricSvc', operation: change, startup: 4}       # AI Fabric
+  - !service: {name: 'PimIndexMaintenanceSvc', operation: change, startup: 4}
+  - !service: {name: 'shpamsvc', operation: change, startup: 4}            # Shared PC Account Mgr
+  - !service: {name: 'SgrmBroker', operation: change, startup: 4, option: 'disable-defender'}   # System Guard Runtime
+  - !service: {name: 'SgrmAgent', operation: change, startup: 4, option: 'disable-defender'}
+  - !service: {name: 'uhssvc', operation: change, startup: 4}              # Update Health Tools
+  - !service: {name: 'whesvc', operation: change, startup: 4}              # Windows Hardware Error
+  - !service: {name: 'Fax', operation: change, startup: 4}
+  - !service: {name: 'RemoteRegistry', operation: change, startup: 4}
+  - !service: {name: 'RemoteAccess', operation: change, startup: 4}
+  - !service: {name: 'MessagingService', operation: change, startup: 4}
+  - !service: {name: 'EFS', operation: change, startup: 4}                 # Encrypting File System
+  - !service: {name: 'CscService', operation: change, startup: 4}          # Offline Files
+  - !service: {name: 'fdc', operation: change, startup: 4}                 # Function Discovery Resource
+  - !service: {name: 'flpydisk', operation: change, startup: 4}
+  - !service: {name: 'sfloppy', operation: change, startup: 4}
+  - !service: {name: 'serial', operation: change, startup: 4}
+  - !service: {name: 'serenum', operation: change, startup: 4}
+  - !service: {name: 'sermouse', operation: change, startup: 4}
+  - !service: {name: 'ErrDev', operation: change, startup: 4}
+  - !service: {name: 'CompositeBus', operation: change, startup: 4}
+  - !service: {name: 'SCardSvr', operation: change, startup: 4}            # Smart Card
+  - !service: {name: 'ScDeviceEnum', operation: change, startup: 4}        # Smart Card Device Enum
+  - !service: {name: 'GpuEnergyDrv', operation: change, startup: 4, option: 'disable-powersave'}
+  - !service: {name: 'ose', operation: change, startup: 4}              # Office Source Engine
+  - !service: {name: 'osppsvc', operation: change, startup: 4}          # Office Software Protection Platform
+  - !service: {name: 'ClickToRunSvc', operation: change, startup: 4}    # Office Click-to-Run
+  # Restore networking-critical services to automatic start after mass disable (FSOS safety-net)
+  - !powerShell: {command: 'foreach ($kv in @{iphlpsvc=2;tcpipreg=2;Dnscache=2;NlaSvc=2;netprofm=2}.GetEnumerator()) { $k = ''HKLM:\SYSTEM\CurrentControlSet\Services\'' + $kv.Key; if (Test-Path $k) { try { Set-ItemProperty $k ''Start'' $kv.Value DWord -Force -EA 0 } catch {} } }', runas: currentUserElevated, wait: true}
+  # Fix "Not connected" cosmetic bug — create key first (may not exist), then enable NCSI probing, restart services
+  - !registryKey: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\NlaSvc\Parameters\Internet', operation: add}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\NlaSvc\Parameters\Internet', value: 'EnableActiveProbing', type: REG_DWORD, data: '1'}
+  - !powerShell: {command: 'Restart-Service netprofm -Force -EA 0; Restart-Service NlaSvc -Force -EA 0', runas: currentUserElevated, wait: true}
+
+  # ==========================================================================
+  # SECTION 18 - PRINTING (toggle: disable-print) + BLUETOOTH (toggle: disable-bluetooth)
+  # ==========================================================================
+  - !status: {status: 'Disabling Printing', option: 'disable-print'}
+  - !service: {name: 'spooler', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'printworkflowusersvc', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'stisvc', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'PrintNotify', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'usbprint', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'McpManagementService', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'PrintScanBrokerService', operation: change, startup: 4, option: 'disable-print'}
+  - !service: {name: 'PrintDeviceConfigurationService', operation: change, startup: 4, option: 'disable-print'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"Printing-PrintToPDFServices-Features" /NoRestart', option: 'disable-print'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"Printing-Foundation-Features" /NoRestart', option: 'disable-print'}
+
+  - !status: {status: 'Disabling Bluetooth', option: 'disable-bluetooth'}
+  - !service: {name: 'bthserv', operation: change, startup: 4, option: 'disable-bluetooth'}
+  - !service: {name: 'BTAGService', operation: change, startup: 4, option: 'disable-bluetooth'}
+  - !service: {name: 'BthAvctpSvc', operation: change, startup: 4, option: 'disable-bluetooth'}
+  - !service: {name: 'bthleenum', operation: change, startup: 4, option: 'disable-bluetooth'}
+  - !powerShell: {command: "Get-PnpDevice -Class Bluetooth -ErrorAction Ignore | Disable-PnpDevice -Confirm:$false -ErrorAction Ignore", runas: currentUserElevated, wait: true, option: 'disable-bluetooth'}
+
+  # ==========================================================================
+  # SECTION 19 - BCDEDIT
+  #   NOTE: 'recoveryenabled no' is deliberately OMITTED -> WinRE stays ON
+  #   (safety net, decision #4). hypervisorlaunchtype handled in Section 20.
+  # ==========================================================================
+  - !status: {status: 'Configuring BCDEDIT'}
+  - !run: {exe: 'bcdedit', args: '/set {current} description "AkariOS"'}
+  - !run: {exe: 'bcdedit', args: '/set bootmenupolicy Legacy'}
+  - !run: {exe: 'bcdedit', args: '/set disabledynamictick yes'}
+  - !run: {exe: 'bcdedit', args: '/set {current} nx optin'}
+  - !run: {exe: 'bcdedit', args: '/set {current} disableelamdrivers yes'}
+  - !run: {exe: 'powercfg', args: '-h off'}
+  - !run: {exe: 'label', args: '%systemdrive% AkariOS'}
+  # FileSystem
+  - !run: {exe: 'fsutil', args: 'behavior set disablelastaccess 1'}
+  - !run: {exe: 'fsutil', args: 'behavior set disable8dot3 1'}
+
+  # ==========================================================================
+  # SECTION 20 - HYPER-V / VBS  (toggle: disable-hyperv)
+  # ==========================================================================
+  - !status: {status: 'Disabling Hyper-V & VBS', option: 'disable-hyperv'}
+  # VBS / memory integrity / device guard off (WinSux-style)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard', value: 'EnableVirtualizationBasedSecurity', type: REG_DWORD, data: '0', option: 'disable-hyperv'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity', value: 'Enabled', type: REG_DWORD, data: '0', option: 'disable-hyperv'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\CredentialGuard', value: 'Enabled', type: REG_DWORD, data: '0', option: 'disable-hyperv'}
+  - !service: {name: 'vmbushid', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'HvHost', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmickvpexchange', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'storflt', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'Vid', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmbus', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmicvss', operation: change, startup: 4, option: 'disable-hyperv'}   # Hyper-V guest VSS only (NOT host System Restore)
+  - !service: {name: 'vmicshutdown', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmicheartbeat', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vmictimesync', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'vpci', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !service: {name: 'storqosflt', operation: change, startup: 4, option: 'disable-hyperv'}
+  - !run: {exe: 'bcdedit', args: '/set hypervisorlaunchtype off', option: 'disable-hyperv'}
+  - !run: {exe: 'bcdedit', args: '/set vsmlaunchtype Off', option: 'disable-hyperv'}
+  - !run: {exe: 'DISM.exe', args: '/Online /Disable-Feature /FeatureName:"Microsoft-Hyper-V-All" /NoRestart', option: 'disable-hyperv'}
+
+  # ==========================================================================
+  # SECTION 21 - PROCESS MITIGATIONS  (toggle: disable-process-mitigations)
+  #   Self-contained registry method (WinSux-style MitigationOptions binary),
+  #   no external .bat required.
+  # ==========================================================================
+  - !status: {status: 'Disabling Process Mitigations', option: 'disable-process-mitigations'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel', value: 'MitigationOptions', type: REG_BINARY, data: '222222000002000000020000000000000000000000000000', option: 'disable-process-mitigations'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'MoveImages', type: REG_DWORD, data: '0', option: 'disable-process-mitigations'}
+  - !powerShell: {command: 'Set-ProcessMitigation -System -Disable CFG,DEP,ForceRelocateImages,BottomUp,HighEntropy,SEHOP,TerminateOnError -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true, option: 'disable-process-mitigations'}
+
+  # ==========================================================================
+  # SECTION 22 - SPECTRE / MELTDOWN  (toggle: disable-spectre-meltdown)
+  # ==========================================================================
+  - !status: {status: 'Disabling Spectre & Meltdown Mitigations', option: 'disable-spectre-meltdown'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'FeatureSettingsOverride', type: REG_DWORD, data: '3', option: 'disable-spectre-meltdown'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'FeatureSettingsOverrideMask', type: REG_DWORD, data: '3', option: 'disable-spectre-meltdown'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'FeatureSettings', type: REG_DWORD, data: '1', option: 'disable-spectre-meltdown'}
+
+  # ==========================================================================
+  # SECTION 23 - PRIVACY / TELEMETRY TWEAKS  (always on)
+  # ==========================================================================
+  - !status: {status: 'Applying privacy tweaks'}
+  # Telemetry level
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: 'AllowTelemetry', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection', value: 'AllowTelemetry', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: 'DoNotShowFeedbackNotifications', type: REG_DWORD, data: '1'}
+  # Advertising ID
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo', value: 'DisabledByGroupPolicy', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo', value: 'Enabled', type: REG_DWORD, data: '0'}
+  # Tailored experiences / consumer features / spotlight
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy', value: 'TailoredExperiencesWithDiagnosticDataEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent', value: 'DisableWindowsConsumerFeatures', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent', value: 'DisableWindowsSpotlightFeatures', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SilentInstalledAppsEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SystemPaneSuggestionsEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-338388Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'FeatureManagementEnabled', type: REG_DWORD, data: '0'}
+  # Activity feed / input personalization / location
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System', value: 'EnableActivityFeed', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System', value: 'PublishUserActivities', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\InputPersonalization', value: 'RestrictImplicitInkCollection', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\InputPersonalization', value: 'RestrictImplicitTextCollection', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Personalization\Settings', value: 'AcceptedPrivacyPolicy', type: REG_DWORD, data: '0'}
+  # Remote Assistance off (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance', value: 'fAllowToGetHelp', type: REG_DWORD, data: '0'}
+  # Stop SPP from requesting license tickets over the network (FSOS)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\Software Protection Platform', value: 'NoGenTicket', type: REG_DWORD, data: '1'}
+  # Stop SPP activation phone-home (FSOS)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform\Activation', value: 'Manual', type: REG_DWORD, data: '1'}
+  # Block MRT (Malicious Removal Tool) from being pushed via Windows Update (FSOS)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\MRT', value: 'DontOfferThroughWUAU', type: REG_DWORD, data: '1'}
+  # Extended privacy block (FSOS phase3 + phase7)
+  # --- Cortana / voice ---
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'CortanaEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'CortanaInAmbientMode', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\default\Experience\AllowCortana', value: 'value', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\Software\Microsoft\Speech_OneCore\Preferences', value: 'VoiceActivationDefaultOn', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE', value: 'DisableVoice', type: REG_DWORD, data: '1'}
+  # --- Telemetry kill / IFEO debugger intercept ---
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\WindowsMitigation', value: 'UserPreference', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\CompatTelRunner.exe', value: 'Debugger', type: REG_SZ, data: '%SYSTEMROOT%\System32\taskkill.exe'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\DeviceCensus.exe', value: 'Debugger', type: REG_SZ, data: '%SYSTEMROOT%\System32\taskkill.exe'}
+  # --- WER extended logging off ---
+  - !registryValue: {path: 'HKLM\Software\Microsoft\Windows\Windows Error Reporting', value: 'LoggingDisabled', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\Software\Microsoft\Windows\Windows Error Reporting', value: 'DontSendAdditionalData', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\Software\Policies\Microsoft\Windows\Windows Error Reporting', value: 'Disabled', type: REG_DWORD, data: '1'}
+  # --- Feedback / CEIP / SQM ---
+  - !registryValue: {path: 'HKLM\Software\Policies\Microsoft\SQMClient\Windows', value: 'CEIPEnable', type: REG_DWORD, data: '0'}
+  # --- Preview builds / experimentation ---
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\PreviewBuilds', value: 'EnableExperimentation', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\PreviewBuilds', value: 'AllowBuildPreview', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\PreviewBuilds', value: 'EnableConfigFlighting', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\default\System\AllowExperimentation', value: 'value', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\WindowsSelfHost\UI\Visibility', value: 'HideInsiderPage', type: REG_DWORD, data: '1'}
+  # --- Wi-Fi Sense / maps / location ---
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config', value: 'AutoConnectAllowedOEM', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting', value: 'value', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Maps', value: 'AutoDownloadAndUpdateMapData', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Maps', value: 'AllowUntriggeredNetworkTrafficOnSettingsPage', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\MdmCommon\SettingValues', value: 'LocationSyncEnabled', type: REG_DWORD, data: '0'}
+  # --- Handwriting data sharing ---
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\TabletPC', value: 'PreventHandwritingDataSharing', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\HandwritingErrorReports', value: 'PreventHandwritingErrorReports', type: REG_DWORD, data: '1'}
+  # --- Lock screen / UI tips / notifications ---
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System', value: 'DisableLockScreenAppNotifications', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System', value: 'AllowOnlineTips', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.Suggested', value: 'Enabled', type: REG_DWORD, data: '0'}
+  # --- Defender cloud reporting (option: disable-defender) ---
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet', value: 'LocalSettingOverrideSpynetReporting', type: REG_DWORD, data: '0', option: 'disable-defender'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet', value: 'DisableBlockAtFirstSeen', type: REG_DWORD, data: '1', option: 'disable-defender'}
+  # --- Per-user HKCU privacy keys ---
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications', value: 'GlobalUserDisabled', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Search', value: 'BackgroundAppGlobalToggle', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\InputPersonalization\TrainedDataStore', value: 'HarvestContacts', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudStore', value: 'DisableRoamingSync', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Siuf\Rules', value: 'NumberOfSIUFInPeriod', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Siuf\Rules', value: 'PeriodInNanoSeconds', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy', value: 'HasAccepted', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\International\User Profile', value: 'HttpAcceptLanguageOptOut', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement', value: 'ScoobeSystemSettingEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Search', value: 'DeviceHistoryEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Search', value: 'HistoryViewEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\AppManagement\AppSettings', value: 'ArchiveAppsEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Input\Settings', value: 'InsightsEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\InkingAndTypingPersonalization', value: 'Value', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer', value: 'ShowRecent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\SystemSettings\AccountNotifications', value: 'EnableAccountNotifications', type: REG_DWORD, data: '0'}
+  # SubscribedContent (sponsored/suggested content tiles)
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-353694Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-353696Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-370697Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-370700Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-400923Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-338393Enabled', type: REG_DWORD, data: '0'}
+  # --- HKU\.DEFAULT mirrors (applies to system/service accounts + new user template) ---
+  - !registryValue: {path: 'HKU\.DEFAULT\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy', value: 'HasAccepted', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKU\.DEFAULT\Software\Microsoft\Personalization\Settings', value: 'AcceptedPrivacyPolicy', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKU\.DEFAULT\Software\Microsoft\Siuf\Rules', value: 'NumberOfSIUFInPeriod', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKU\.DEFAULT\Software\Microsoft\Siuf\Rules', value: 'PeriodInNanoSeconds', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKU\.DEFAULT\Control Panel\International\User Profile', value: 'HttpAcceptLanguageOptOut', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Search', value: 'BackgroundAppGlobalToggle', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications', value: 'GlobalUserDisabled', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\SystemSettings\AccountNotifications', value: 'EnableAccountNotifications', type: REG_DWORD, data: '0'}
+  # --- HKLM speech / voice (system-wide) ---
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy', value: 'HasAccepted', type: REG_DWORD, data: '0'}
+  # --- Shell taskbar feeds: hide news/interests across all loaded hives (FSOS) ---
+  - !powerShell: {command: 'Get-ChildItem ''Registry::HKU'' -EA 0 | Where-Object { ($_.PSChildName -match ''^S-1-5-21-'' -and $_.PSChildName -notmatch ''_Classes$'') -or $_.PSChildName -eq ''.DEFAULT'' } | ForEach-Object { $k = ''Registry::HKU\'' + $_.PSChildName + ''\Software\Microsoft\Windows\CurrentVersion\Feeds''; New-Item -Path $k -Force -EA 0 | Out-Null; Set-ItemProperty -Path $k -Name ''ShellFeedsTaskbarViewMode'' -Value 2 -Type DWord -Force -EA 0 }', runas: currentUserElevated, wait: true}
+  # --- Voice activation: disable across all loaded user hives (FSOS) ---
+  - !powerShell: {command: '$vaS = @(''Registry::HKEY_USERS\.DEFAULT''); Get-ChildItem ''Registry::HKEY_USERS'' -EA 0 | Where-Object { $_.PSChildName -match ''^S-1-5-21-'' -and $_.PSChildName -notmatch ''_Classes$'' } | ForEach-Object { $vaS += ''Registry::HKEY_USERS\'' + $_.PSChildName }; foreach ($vs in $vaS) { $vk = $vs + ''\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation''; try { New-Item $vk -Force -EA 0 | Out-Null } catch {}; try { Set-ItemProperty $vk ''UserPreferenceForAllApps'' 0 DWord -Force -EA 0 } catch {} }', runas: currentUserElevated, wait: true}
+  # --- Capability access: bulk-deny privacy-sensitive capabilities across all user hives (FSOS) ---
+  - !powerShell: {command: '$caps = @(''location'',''microphone'',''webcam'',''contacts'',''appointments'',''chat'',''email'',''phoneCall'',''phoneCallHistory'',''userDataTasks'',''userAccountInformation'',''radios'',''userNotificationListener'',''cellularData'',''appDiagnostics'',''activity''); foreach ($scope in @(''HKLM:\SOFTWARE'',''Registry::HKEY_USERS\.DEFAULT\Software'')) { foreach ($cap in $caps) { $b = $scope + ''\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\'' + $cap; try { New-Item $b -Force -EA 0 | Out-Null } catch {}; try { Set-ItemProperty $b ''Value'' ''Deny'' String -Force -EA 0 } catch {} } }; Get-ChildItem ''Registry::HKEY_USERS'' -EA 0 | Where-Object { $_.PSChildName -match ''^S-1-5-21-'' -and $_.PSChildName -notmatch ''_Classes$'' } | ForEach-Object { $sid = $_.PSChildName; foreach ($cap in $caps) { $b = ''Registry::HKEY_USERS\'' + $sid + ''\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\'' + $cap; try { New-Item $b -Force -EA 0 | Out-Null } catch {}; try { Set-ItemProperty $b ''Value'' ''Deny'' String -Force -EA 0 } catch {} } }', runas: currentUserElevated, wait: true}
+  # --- Microsoft Store: disable automatic app downloads (Atlas gap) ---
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsStore\WindowsUpdate', value: 'AutoDownload', type: REG_DWORD, data: '2'}
+  # --- Settings banners / content delivery (Atlas gap) ---
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-338393Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-353694Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: 'SubscribedContent-353696Enabled', type: REG_DWORD, data: '0'}
+  # --- Network Location Wizard: suppress "Do you want your PC to be discoverable?" prompt ---
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Network\NewNetworkWindowOff', value: '', type: REG_SZ, data: ''}
+  # --- LSA: restrict anonymous access and SAM enumeration (Atlas gap, security hardening) ---
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Lsa', value: 'RestrictAnonymous', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Lsa', value: 'RestrictAnonymousSAM', type: REG_DWORD, data: '1'}
+
+  # ==========================================================================
+  # SECTION 24 - FIREWALL  (keep firewall ON; privacy hardening only)
+  #   Notifications + logging off, plus targeted outbound BLOCK rules for
+  #   telemetry-heavy shell components. We deliberately do NOT wipe the whole
+  #   FirewallRules key (Vain does) - that can break inbound sharing/games.
+  # ==========================================================================
+  - !status: {status: 'Configuring Firewall'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile', value: 'DisableNotifications', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile', value: 'DisableNotifications', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\PublicProfile', value: 'DisableNotifications', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\StandardProfile\Logging', value: 'LogDroppedPackets', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile\Logging', value: 'LogDroppedPackets', type: REG_DWORD, data: '0'}
+  # Targeted outbound blocks (Search/Cortana + Settings phone-home)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules', value: 'Block SearchApp', type: REG_SZ, data: 'v2.32|Action=Block|Active=TRUE|Dir=Out|App=%SystemRoot%\SystemApps\Microsoft.Windows.Search_cw5n1h2txyewy\SearchApp.exe|Name=Block SearchApp|'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules', value: 'Block SearchHost', type: REG_SZ, data: 'v2.32|Action=Block|Active=TRUE|Dir=Out|App=%SystemRoot%\SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\SearchHost.exe|Name=Block SearchHost|'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules', value: 'Block SystemSettings', type: REG_SZ, data: 'v2.32|Action=Block|Active=TRUE|Dir=Out|App=%SystemRoot%\ImmersiveControlPanel\SystemSettings.exe|Name=Block SystemSettings|'}
+
+  # ==========================================================================
+  # SECTION 25 - GENERAL TWEAKS  (always on)
+  # ==========================================================================
+  - !status: {status: 'Applying general tweaks'}
+  # Svchost split threshold (Vain universal 0xFFFFFFFF -> always group services,
+  # lower RAM/process overhead; replaces V5 svchost.ps1)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control', value: 'SvcHostSplitThresholdInKB', type: REG_DWORD, data: '4294967295'}
+  # Disable BitLocker on encrypted volumes (Ultimate logic, no menu/pause).
+  # Only touches volumes still protected/encrypting; BDESVC is disabled in Section 17.
+  - !powerShell: {command: 'try { Get-BitLockerVolume | Where-Object { $_.ProtectionStatus -eq ''On'' -or $_.VolumeStatus -ne ''FullyDecrypted'' } | ForEach-Object { Disable-BitLocker -MountPoint $_.MountPoint -ErrorAction SilentlyContinue | Out-Null } } catch { }', runas: currentUserElevated, wait: true}
+  # Fault Tolerant Heap
+  - !powerShell: {command: 'Set-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\FTH'' -Name ''Enabled'' -Value 0 -Type DWORD -ErrorAction SilentlyContinue', wait: true}
+  # Game DVR / Game Bar
+  - !registryValue: {path: 'HKCU\System\GameConfigStore', value: 'GameDVR_Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\System\GameConfigStore', value: 'GameDVR_HonorUserFSEBehaviorMode', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR', value: 'AppCaptureEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR', value: 'AllowGameDVR', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\GameBar', value: 'ShowStartupPanel', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\GameBar', value: 'UseNexusForGameBarEnabled', type: REG_DWORD, data: '0'}
+  # Game Mode ON (lets Windows prioritise the foreground game thread for CPU/GPU resources)
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\GameBar', value: 'AutoGameModeEnabled', type: REG_DWORD, data: '1'}
+  # Mobility sync center
+  - !run: {exe: 'taskkill', args: '/im mobsync.exe /f'}
+  # Explorer UI defaults
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'HideFileExt', type: REG_DWORD, data: '0'}     # show extensions
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'LaunchTo', type: REG_DWORD, data: '1'}         # open to This PC
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'ShowSyncProviderNotifications', type: REG_DWORD, data: '0'}
+  - !powerShell: {command: 'Disable-MMAgent -MemoryCompression -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true, option: 'disable-memory-compression'}
+  # Prevent Windows Update from auto-downloading drivers (WinSux)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching', value: 'SearchOrderConfig', type: REG_DWORD, data: '0'}
+  # Service kill timeout - 2 s instead of default 5 s (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control', value: 'WaitToKillServiceTimeout', type: REG_SZ, data: '2000'}
+  # Keep kernel code/data in RAM, not paged to disk (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: 'DisablePagingExecutive', type: REG_DWORD, data: '1'}
+  # Foreground thread boost: short quantums, variable, max 3:1 foreground ratio (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl', value: 'Win32PrioritySeparation', type: REG_DWORD, data: '26'}
+  # MMCSS: 0% reserved for background — all CPU available to games (gaming-focused)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile', value: 'SystemResponsiveness', type: REG_DWORD, data: '0'}
+  # Disable Windows network throttling (prevents packet rate limiting during gameplay)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile', value: 'NetworkThrottlingIndex', type: REG_DWORD, data: 'ffffffff'}
+  # Disable audio ducking when communication apps are active (FSOS)
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Multimedia\Audio', value: 'UserDuckingPreference', type: REG_DWORD, data: '3'}
+  - !registryValue: {path: 'HKU\.DEFAULT\Software\Microsoft\Multimedia\Audio', value: 'UserDuckingPreference', type: REG_DWORD, data: '3'}
+  # Suppress the first-logon animation (FSOS)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'EnableFirstLogonAnimation', type: REG_DWORD, data: '0'}
+  # MMCSS Games task tuning (elevated scheduling priority for game threads)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'Priority', type: REG_DWORD, data: '6'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'GPU Priority', type: REG_DWORD, data: '8'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'Scheduling Category', type: REG_SZ, data: 'High'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'SFIO Priority', type: REG_SZ, data: 'High'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games', value: 'Background Only', type: REG_SZ, data: 'False'}
+  # Service pipe connection timeout - 30 s (explicit, prevents hanging on slow services)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control', value: 'ServicesPipeTimeout', type: REG_DWORD, data: '30000'}
+  # Hardware-Accelerated GPU Scheduling (HAGS) - requires WDDM 2.7+ driver (Nvidia 451.48+, AMD 20.5.1+)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers', value: 'HwSchMode', type: REG_DWORD, data: '2'}
+  # DirectX flip model upgrade + VRR optimization (global user preference)
+  - !registryValue: {path: 'HKCU\Software\Microsoft\DirectX\UserGpuPreferences', value: 'DirectXUserGlobalSettings', type: REG_SZ, data: 'SwapEffectUpgradeEnable=1;VRROptimizeEnable=0;'}
+
+  # ==========================================================================
+  # SECTION 26 - CONTROL PANEL SETTINGS
+  #   All tweaks from ControlPanelSettings.reg are now inlined as
+  #   !registryValue directives. The .reg file remains in Executables\ but
+  #   is no longer imported (dead reference, kept for reference only).
+  #   Extra runtime steps follow the registry block:
+  #     • CapabilityConsentStorage.db wipe (forces privacy Deny grants)
+  #     • ScheduledDefrag task disable
+  #     • powercfg lock-on-idle off
+  #     • Dynamic CloudStore GUID patching for priority-notifications
+  #   Skipped from .reg (handled elsewhere or intentional omission):
+  #     • Camera/Mic Allow  → FSOS bulk-deny PS block (Section 23) sets Deny
+  #     • AutoGameModeEnabled 1 → set at Section 25 line (Game Mode ON)
+  #     • DPI forcing (LogPixels/Win8DpiScaling) → user-hardware decision
+  #     • Sound scheme / AppEvents → user audio preference
+  #     • CloudStore binary blobs → dynamic PS block handles at runtime
+  #     • FeatureManagement Overrides → deferred
+  #     • Snap Assist / Wallpaper / Lockscreen → AkariOS handles separately
+  #     • Capability ConsentStore Deny (all) → Section 23 bulk-deny PS block
+  # ==========================================================================
+  - !status: {status: 'Applying Control Panel Settings'}
+  # -- EASE OF ACCESS: Narrator --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'DuckAudio', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'WinEnterLaunchEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'ScriptingEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'OnlineServicesEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator\NoRoam', value: 'EchoToggleKeys', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator', value: 'NarratorCursorHighlight', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Narrator', value: 'CoupleNarratorCursorKeyboard', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Narrator\NarratorHome', value: 'MinimizeType', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Narrator\NarratorHome', value: 'AutoStart', type: REG_DWORD, data: '0'}
+  # -- EASE OF ACCESS: Accessibility flags --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Ease of Access', value: 'selfvoice', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Ease of Access', value: 'selfscan', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility', value: 'Sound on Activation', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility', value: 'Warning Sounds', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\HighContrast', value: 'Flags', type: REG_SZ, data: '4194'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\Keyboard Response', value: 'Flags', type: REG_SZ, data: '2'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\Keyboard Response', value: 'AutoRepeatRate', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\Keyboard Response', value: 'AutoRepeatDelay', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\MouseKeys', value: 'Flags', type: REG_SZ, data: '130'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\MouseKeys', value: 'MaximumSpeed', type: REG_SZ, data: '39'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\MouseKeys', value: 'TimeToMaximumSpeed', type: REG_SZ, data: '3000'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\StickyKeys', value: 'Flags', type: REG_SZ, data: '2'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\ToggleKeys', value: 'Flags', type: REG_SZ, data: '34'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SoundSentry', value: 'Flags', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SoundSentry', value: 'FSTextEffect', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SoundSentry', value: 'TextEffect', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SoundSentry', value: 'WindowsEffect', type: REG_SZ, data: '0'}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SlateLaunch', value: 'ATapp', type: REG_SZ, data: ''}
+  - !registryValue: {path: 'HKCU\Control Panel\Accessibility\SlateLaunch', value: 'LaunchAT', type: REG_DWORD, data: '0'}
+  # -- CLOCK & REGION --
+  - !registryValue: {path: 'HKCU\Control Panel\TimeDate', value: 'DstNotification', type: REG_DWORD, data: '0'}
+  # -- EXPLORER UI (supplements Section 25 defaults) --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer', value: 'ShowFrequent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer', value: 'ShowCloudFilesInQuickAccess', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'FolderContentsInfoTip', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'ShowInfoTip', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState', value: 'FullPath', type: REG_DWORD, data: '1'}
+  # -- TROUBLESHOOTING: disable automatic maintenance wake --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance', value: 'MaintenanceDisabled', type: REG_DWORD, data: '1'}
+  # -- SECURITY & MAINTENANCE: suppress WER --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting', value: 'Disabled', type: REG_DWORD, data: '1'}
+  # -- PRIVACY: tailored experiences CPSS store path --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\TailoredExperiencesWithDiagnosticDataEnabled', value: 'Value', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\UserLocationOverridePrivacySetting', value: 'Value', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location', value: 'ShowGlobalPrompts', type: REG_DWORD, data: '0'}
+  # -- ACCOUNTS --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows NT\CurrentVersion\Winlogon', value: 'EnableGoodbye', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', value: 'DisableAutomaticRestartSignOn', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\Software\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device', value: 'DevicePasswordLessUpdateType', type: REG_DWORD, data: '1'}
+  # -- WINDOWS BACKUP: disable all sync categories --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableAccessibilitySettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableAccessibilitySettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableAppSyncSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableAppSyncSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableApplicationSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableApplicationSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableCredentialsSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableCredentialsSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableDesktopThemeSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableDesktopThemeSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableLanguageSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableLanguageSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisablePersonalizationSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisablePersonalizationSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableStartLayoutSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableStartLayoutSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableSyncOnPaidNetwork', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableWebBrowserSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableWebBrowserSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableWindowsSettingSync', type: REG_DWORD, data: '2'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'DisableWindowsSettingSyncUserOverride', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync', value: 'EnableWindowsBackup', type: REG_DWORD, data: '0'}
+  # -- APPS --
+  - !registryValue: {path: 'HKLM\SYSTEM\Maps', value: 'AutoUpdateEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Appx', value: 'AllowAutomaticAppArchiving', type: REG_DWORD, data: '0'}
+  # -- PERSONALIZATION & TASKBAR --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarAl', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarSd', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarMn', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'ShowTaskViewButton', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'ShowCopilotButton', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'TaskbarSn', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'IsEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'IconSizePreference', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer', value: 'HideSCAMeetNow', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Dsh', value: 'AllowNewsAndInterests', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds', value: 'EnableFeeds', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer', value: 'EnableAutoTray', type: REG_DWORD, data: '0'}
+  # -- START MENU --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Start', value: 'HideRecommendedSection', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Education', value: 'IsEducationEnvironment', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer', value: 'HideRecommendedSection', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer', value: 'HideRecentlyAddedApps', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'Start_Layout', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'Start_RecoPersonalizedSites', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'Start_TrackDocs', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Start', value: 'ShowRecentList', type: REG_DWORD, data: '0'}
+  # -- DISABLE APP LAUNCH TRACKING (EdgeUI MFU) --
+  - !registryValue: {path: 'HKCU\Software\Policies\Microsoft\Windows\EdgeUI', value: 'DisableMFUTracking', type: REG_DWORD, data: '1'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\EdgeUI', value: 'DisableMFUTracking', type: REG_DWORD, data: '1'}
+  # -- GAME BAR --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\GameBar', value: 'GamepadNexusChordEnabled', type: REG_DWORD, data: '0'}
+  # -- TIME & LANGUAGE --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\input\Settings', value: 'IsVoiceTypingKeyEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\input\Settings', value: 'InsightsEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'EnableAutoShiftEngage', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'EnableKeyAudioFeedback', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'EnableDoubleTapSpace', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'TouchKeyboardTapInvoke', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\CTF\LangBar', value: 'ExtraIconsOnMinimized', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\CTF\LangBar', value: 'Label', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\CTF\LangBar', value: 'ShowStatus', type: REG_DWORD, data: '3'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\CTF\LangBar', value: 'Transparency', type: REG_DWORD, data: '255'}
+  - !registryValue: {path: 'HKCU\Keyboard Layout\Toggle', value: 'Language Hotkey', type: REG_SZ, data: '3'}
+  - !registryValue: {path: 'HKCU\Keyboard Layout\Toggle', value: 'Hotkey', type: REG_SZ, data: '3'}
+  - !registryValue: {path: 'HKCU\Keyboard Layout\Toggle', value: 'Layout Hotkey', type: REG_SZ, data: '3'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'GleamEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'WeatherEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search', value: 'HolidayEnabled', type: REG_DWORD, data: '0'}
+  # -- TOUCH / TABLET --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'TipbandDesiredVisibility', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\1.7', value: 'IsKeyBackgroundEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\TabletTip\EmbeddedInkControl', value: 'EnableInkingWithTouch', type: REG_DWORD, data: '0'}
+  # -- DEVICES --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Shell\USB', value: 'NotifyOnUsbErrors', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows NT\CurrentVersion\Windows', value: 'LegacyDefaultPrinterMode', type: REG_DWORD, data: '1'}
+  # -- DYNAMIC LIGHTING --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Lighting', value: 'AmbientLightingEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Lighting', value: 'ControlledByForegroundApp', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Lighting', value: 'UseSystemAccentColor', type: REG_DWORD, data: '0'}
+  # -- SYSTEM: PrtSc snipping & video settings --
+  - !registryValue: {path: 'HKCU\Control Panel\Keyboard', value: 'PrintScreenKeyForSnippingEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\VideoSettings', value: 'VideoQualityOnBattery', type: REG_DWORD, data: '1'}
+  # -- NOTIFICATIONS (per-app channels) --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\PushNotifications', value: 'ToastEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Microsoft.SkyDrive.Desktop', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.AutoPlay', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.SecurityAndMaintenance', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.CapabilityAccess', value: 'Enabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.StartupApp', value: 'Enabled', type: REG_DWORD, data: '0'}
+  # -- SUGGESTED ACTIONS --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\SmartActionPlatform\SmartClipboard', value: 'Disabled', type: REG_DWORD, data: '1'}
+  # -- STORAGE SENSE: disable globally --
+  - !registryValue: {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\StorageSense', value: 'AllowStorageSenseGlobal', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '04', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '2048', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '08', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '256', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: '32', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy', value: 'StoragePoliciesChanged', type: REG_DWORD, data: '1'}
+  # -- CDP / NEARBY SHARING --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CDP', value: 'DragTrayEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP', value: 'RomeSdkChannelUserAuthzPolicy', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CDP', value: 'CdpSessionUserAuthzPolicy', type: REG_DWORD, data: '0'}
+  # -- TASKBAR: End Task on right-click --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings', value: 'TaskbarEndTask', type: REG_DWORD, data: '1'}
+  # -- LONG PATHS --
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\FileSystem', value: 'LongPathsEnabled', type: REG_DWORD, data: '1'}
+  # -- ALT+TAB: open windows only, no browser tabs --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: 'MultiTaskingAltTabFilter', type: REG_DWORD, data: '3'}
+  # -- DEVICE USAGE / CLOUD EXPERIENCE HOST --
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\developer', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\developer', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\gaming', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\gaming', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\family', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\family', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\creative', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\creative', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\schoolwork', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\schoolwork', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\entertainment', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\entertainment', value: 'Priority', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\business', value: 'Intent', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\CloudExperienceHost\Intent\business', value: 'Priority', type: REG_DWORD, data: '0'}
+  # Wipe CapabilityConsentStorage.db so privacy Deny grants actually take effect
+  - !powerShell: {command: 'Stop-Service -Name ''camsvc'' -Force -EA 0; Remove-Item ($env:ProgramData + ''\Microsoft\Windows\CapabilityAccessManager\CapabilityConsentStorage.db*'') -Force -EA 0', runas: currentUserElevated, wait: true}
+  # Disable Defrag scheduled task
+  - !scheduledTask: {path: '\Microsoft\Windows\Defrag\ScheduledDefrag', operation: disable}
+  # Disable lock-on-idle (sign-in required after wake) for both AC and DC
+  - !cmd: {command: 'powercfg /setdcvalueindex scheme_current sub_none consolelock 0 2>nul & powercfg /setacvalueindex scheme_current sub_none consolelock 0 2>nul', runas: currentUserElevated, wait: true}
+  # Patch dynamic GUID for CloudStore priority-notifications profile
+  - !powerShell: {command: '$guids = Get-ChildItem ''HKCU:\Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current'' -EA 0 | Where-Object { $_.PSChildName -match ''^\{[a-f0-9-]+\}\$'' } | ForEach-Object { ($_.PSChildName -split ''\$'')[0] } | Select-Object -Unique; $data = ''43,42,01,00,0A,02,01,00,2A,06,DF,B8,B4,CC,06,2A,2B,0E,D0,03,43,42,01,00,C2,0A,01,CD,14,06,02,05,00,00,01,01,02,00,03,01,04,00,CC,32,12,05,28,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,53,00,63,00,72,00,65,00,65,00,6E,00,53,00,6B,00,65,00,74,00,63,00,68,00,5F,00,38,00,77,00,65,00,6B,00,79,00,62,00,33,00,64,00,38,00,62,00,62,00,77,00,65,00,21,00,41,00,70,00,70,00,29,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,57,00,69,00,6E,00,64,00,6F,00,77,00,73,00,41,00,6C,00,61,00,72,00,6D,00,73,00,5F,00,38,00,77,00,65,00,6B,00,79,00,62,00,33,00,64,00,38,00,62,00,62,00,77,00,65,00,21,00,41,00,70,00,70,00,31,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,58,00,62,00,6F,00,78,00,41,00,70,00,70,00,5F,00,38,00,77,00,65,00,6B,00,79,00,62,00,33,00,64,00,38,00,62,00,62,00,77,00,65,00,21,00,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,58,00,62,00,6F,00,78,00,41,00,70,00,70,00,2D,4D,00,69,00,63,00,72,00,6F,00,73,00,6F,00,66,00,74,00,2E,00,58,00,62,00,6F,00,78,00,47,00,61,00,6D,00,69,00,6E,00,67,00,4F,00,76,00,65,00,72,00,6C,00,61,00,79,00,5F,00,38,00,77,00,65,00,6B,00,79,00,62,00,33,00,64,00,38,00,62,00,62,00,77,00,65,00,21,00,41,00,70,00,70,00,29,57,00,69,00,6E,00,64,00,6F,00,77,00,73,00,2E,00,53,00,79,00,73,00,74,00,65,00,6D,00,2E,00,4E,00,65,00,61,00,72,00,53,00,68,00,61,00,72,00,65,00,45,00,78,00,70,00,65,00,72,00,69,00,65,00,6E,00,63,00,65,00,52,00,65,00,63,00,65,00,69,00,76,00,65,00,00,00,00,00''; $bytes = ($data -split '','' | ForEach-Object { [byte](''0x'' + $_.Trim()) }); foreach ($guid in $guids) { $key = ''HKCU:\Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current\'' + $guid + ''$windows.data.donotdisturb.quiethoursprofile$quiethoursprofilelist\windows.data.donotdisturb.quiethoursprofile$microsoft.quiethoursprofile.priorityonly''; New-Item $key -Force -EA 0 | Out-Null; Set-ItemProperty $key ''Data'' $bytes -Type Binary -EA 0 }', runas: currentUserElevated, wait: true}
+  # Deploy clean start2.bin (empty Win11 Start menu layout)
+  - !powerShell: {command: '$d = ($env:LOCALAPPDATA + ''\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState''); if (Test-Path $d) { Copy-Item (Join-Path $PWD ''start2.bin'') -Destination $d -Force -EA 0 }', exeDir: true, runas: currentUserElevated, wait: true}
+  # Unpin all taskbar items and remove Quick Launch
+  - !cmd: {command: 'reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband" /f >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !powerShell: {command: 'Remove-Item -Recurse -Force ($env:USERPROFILE + ''\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch'') -EA 0', runas: currentUserElevated, wait: true}
+  # Hide Accessibility/Accessories folders from Start menu
+  - !powerShell: {command: 'foreach ($f in @(($env:USERPROFILE + ''\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Accessibility''), ($env:ProgramData + ''\Microsoft\Windows\Start Menu\Programs\Accessibility''), ($env:ProgramData + ''\Microsoft\Windows\Start Menu\Programs\Accessories''))) { if (Test-Path $f) { cmd /c (''attrib +h "'' + $f + ''" >nul 2>&1''); cmd /c (''attrib +h "'' + $f + ''\*.*" /s /d >nul 2>&1'') } }', runas: currentUserElevated, wait: true}
+
+  # ==========================================================================
+  # SECTION 27 - LEGACY CONTEXT MENU  (toggle: legacy-context-menu)
+  #   Restores the full Windows 10 right-click menu on Windows 11.
+  # ==========================================================================
+  - !status: {status: 'Enabling legacy context menu', option: 'legacy-context-menu'}
+  - !registryValue: {path: 'HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32', value: '', type: REG_SZ, data: '', option: 'legacy-context-menu'}
+
+  # ==========================================================================
+  # SECTION 28 - SCHEDULED TASKS  (always on)
+  #   SAFETY-NET AUDIT: no \Microsoft\Windows\SystemRestore\SR task is touched,
+  #   so scheduled restore points keep running.
+  # ==========================================================================
+  - !status: {status: 'Disabling scheduled tasks'}
+  - !scheduledTask: {path: '\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Application Experience\ProgramDataUpdater', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Application Experience\StartupAppTask', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Customer Experience Improvement Program\Consolidator', operation: delete}
+  - !scheduledTask: {path: '\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip', operation: delete}
+  - !scheduledTask: {path: '\Microsoft\Windows\Feedback\Siuf\DmClient', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Windows Error Reporting\QueueReporting', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Maps\MapsToastTask', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Maps\MapsUpdateTask', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Retail Demo\CleanupOfflineContent', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\CloudExperienceHost\CreateObjectTask', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\PushToInstall\Registration', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\UpdateOrchestrator\Schedule Scan', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\WaaSMedic\PerformRemediation', operation: disable}
+  - !scheduledTask: {path: '\MicrosoftEdgeUpdateTaskMachineCore', operation: delete}
+  - !scheduledTask: {path: '\MicrosoftEdgeUpdateTaskMachineUA', operation: delete}
+  # Additional tasks (FSOS phase3)
+  - !scheduledTask: {path: '\Microsoft\Windows\Flighting\FeatureConfig\ReconcileFeatures', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Flighting\FeatureConfig\UsageDataFlushing', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\DiskFootprint\Diagnostics', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Device Information\Device', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Device Information\Device User', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Diagnosis\Scheduled', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Diagnosis\RecommendedTroubleshootingScanner', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\MemoryDiagnostic\ProcessMemoryDiagnosticEvents', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\MemoryDiagnostic\RunFullMemoryDiagnostic', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\PI\Sqm-Tasks', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\UpdateOrchestrator\Schedule Wake To Work', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\UpdateOrchestrator\Start Oobe Expedite Work', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\UpdateOrchestrator\StartOobeAppsScanAfterUpdate', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\WindowsUpdate\Scheduled Start', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\WindowsAI\Recall\PolicyConfiguration', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\WindowsAI\Settings\InitialConfiguration', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Input\LocalUserSyncDataAvailable', operation: disable}
+  - !scheduledTask: {path: '\Microsoft\Windows\Input\MouseSyncDataAvailable', operation: disable}
+
+  # ==========================================================================
+  # SECTION 29 - NIC / NETWORK TWEAKS  (Vain block + WinSux PnPCapabilities=24)
+  #   IPv6 is intentionally PRESERVED (unlike WinSux). Per-adapter loop over the
+  #   net class GUID: disable power-saving/EEE/wake, add PnPCapabilities=24,
+  #   keep checksum/LSO/RSC offloads enabled.
+  # ==========================================================================
+  - !status: {status: 'Configuring NIC'}
+  - !powerShell: {command: 'Get-ChildItem ''HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}'' -EA 0 | Where-Object {$_.PSChildName -match ''^\d{4}$''} | ForEach-Object { $p=$_.PSPath; Set-ItemProperty -Path $p -Name ''PnPCapabilities'' -Value 24 -Type DWord -Force -EA 0; foreach($n in @(''*EEE'',''EEELinkAdvertisement'',''AdvancedEEE'',''GigaLite'',''ULPMode'',''SipsEnabled'',''EnableGreenEthernet'',''PowerSavingMode'',''*WakeOnMagicPacket'',''*WakeOnPattern'',''*ModernStandbyWoLMagicPacket'',''WakeOnLink'',''S5WakeOnLan'',''*FlowControl'',''*InterruptModeration'',''*RSS'',''EnablePME'',''*SelectiveSuspend'')){ if(Get-ItemProperty -Path $p -Name $n -EA 0){ Set-ItemProperty -Path $p -Name $n -Value ''0'' -Force -EA 0 } }; foreach($n in @(''*TCPChecksumOffloadIPv4'',''*TCPChecksumOffloadIPv6'',''*UDPChecksumOffloadIPv4'',''*UDPChecksumOffloadIPv6'',''*IPChecksumOffloadIPv4'')){ if(Get-ItemProperty -Path $p -Name $n -EA 0){ Set-ItemProperty -Path $p -Name $n -Value ''3'' -Force -EA 0 } }; foreach($n in @(''*LsoV2IPv4'',''*LsoV2IPv6'',''*RscIPv4'',''*RscIPv6'')){ if(Get-ItemProperty -Path $p -Name $n -EA 0){ Set-ItemProperty -Path $p -Name $n -Value ''1'' -Force -EA 0 } } }', runas: currentUserElevated, wait: true}
+  # Trim non-essential bindings (IPv6 / ms_tcpip6 kept)
+  - !powerShell: {command: 'Disable-NetAdapterBinding -Name ''*'' -ComponentID ms_lldp,ms_lltdio,ms_implat,ms_rspndr -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true}
+  # Global TCP/UDP tuning
+  - !cmd: {command: 'netsh int tcp set global timestamps=disabled >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'netsh int udp set global uro=enabled >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !powerShell: {command: 'Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing Enable -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true}
+  # Open full TCP ephemeral port range (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters', value: 'MaxUserPort', type: REG_DWORD, data: '65534'}
+  # LAN bandwidth throttling off (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters', value: 'DisableBandwidthThrottling', type: REG_DWORD, data: '1'}
+  # UDP datagram send-path optimization (FSOS)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters', value: 'FastSendDatagramThreshold', type: REG_DWORD, data: '1500'}
+
+  # ==========================================================================
+  # SECTION 30 - POWER PLAN  (WinSux - Ultimate Performance, high-perf tuned)
+  # ==========================================================================
+  - !status: {status: 'Configuring Power Plan'}
+  # Duplicate Ultimate Performance to a fixed GUID and activate it
+  - !cmd: {command: 'powercfg /duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 99999999-9999-9999-9999-999999999999 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /SETACTIVE 99999999-9999-9999-9999-999999999999 >nul 2>&1', runas: currentUserElevated, wait: true}
+  # Delete all other power plans
+  - !powerShell: {command: "powercfg /L | ForEach-Object { if ($_ -match ':') { $g=($_ -split ':')[1].Trim(); $g=$g.Substring(0,$g.IndexOf('(')); if ($g -ne '99999999-9999-9999-9999-999999999999') { powercfg /delete $g 2>$null | Out-Null } } }", runas: currentUserElevated, wait: true}
+  # Disable hibernate / fast startup / power throttling
+  - !cmd: {command: 'powercfg /hibernate off', runas: currentUserElevated, wait: true}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power', value: 'HiberbootEnabled', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling', value: 'PowerThrottlingOff', type: REG_DWORD, data: '1'}
+  # Processor min/max 100%, cooling active, USB selective suspend off, PCIe LSPM off
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !cmd: {command: 'powercfg /SETACTIVE 99999999-9999-9999-9999-999999999999 >nul 2>&1', runas: currentUserElevated, wait: true}
+
+  # ==========================================================================
+  # SECTION 31 - TIMER RESOLUTION  (WinSux "STR" service)
+  #   Requires settimerresolutionservice.cs in Executables\ (copied to system by
+  #   Section 01 robocopy, or referenced via exeDir). Compiled with in-box csc.
+  # ==========================================================================
+  - !status: {status: 'Installing Timer Resolution Service'}
+  - !cmd: {exeDir: true, command: '"%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:"%SystemRoot%\SetTimerResolutionService.exe" /r:System.ServiceProcess.dll /r:System.Configuration.Install.dll /r:System.Management.dll "settimerresolutionservice.cs" >nul 2>&1', runas: currentUserElevated, wait: true}
+  - !powerShell: {command: 'if (Get-Service -Name ''STR'' -EA 0) { sc.exe delete ''STR'' | Out-Null; Start-Sleep 2 }; New-Service -Name ''STR'' -DisplayName ''Set Timer Resolution Service'' -BinaryPathName ($env:SystemRoot + ''\SetTimerResolutionService.exe'') -StartupType Automatic -EA 0 | Out-Null; Start-Service -Name ''STR'' -EA 0', runas: currentUserElevated, wait: true}
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel', value: 'GlobalTimerResolutionRequests', type: REG_DWORD, data: '1'}
+
+  # ==========================================================================
+  # SECTION 32 - WINDOWS UPDATE - PAUSE  (toggle: disable-wu, WinSux 365-day)
+  #   Pauses updates ~365 days (reversible), does NOT permanently disable WU.
+  # ==========================================================================
+  - !status: {status: 'Pausing Windows Update', option: 'disable-wu'}
+  - !powerShell: {command: '$s=(Get-Date).ToUniversalTime().ToString(''yyyy-MM-ddTHH:mm:ssZ''); $e=(Get-Date).AddDays(365).ToUniversalTime().ToString(''yyyy-MM-ddTHH:mm:ssZ''); $k=''HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings''; New-Item $k -Force -EA 0 | Out-Null; Set-ItemProperty $k PauseUpdatesExpiryTime $e -Force; Set-ItemProperty $k PauseFeatureUpdatesStartTime $s -Force; Set-ItemProperty $k PauseFeatureUpdatesEndTime $e -Force; Set-ItemProperty $k PauseQualityUpdatesStartTime $s -Force; Set-ItemProperty $k PauseQualityUpdatesEndTime $e -Force', runas: currentUserElevated, wait: true, option: 'disable-wu'}
+
+  # ==========================================================================
+  # SECTION 33 - EXTRA POWER SAVINGS  (toggle: disable-powersave, WinSux way)
+  #   Aggressive powercfg tweaks NOT already in Section 30. Applied to the
+  #   fixed Ultimate plan GUID from Section 30. Reversible (switch plan back).
+  #   NOTE: uniform desktop/laptop (no chassis check) - can over-tune laptops.
+  # ==========================================================================
+  - !status: {status: 'Applying extra power savings', option: 'disable-powersave'}
+  # Hard disk: never turn off
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # Wireless adapter: maximum performance
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # Wake timers: disabled
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 238c9fa8-0aad-41ed-83f4-97be242c8f20 bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # USB hub selective-suspend timeout 0 (unhide attribute + set)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\2a737441-1930-4402-8d77-b2bebba308a3\0853a681-27c8-4100-a2fd-82013e970683', value: 'Attributes', type: REG_DWORD, data: '0', option: 'disable-powersave'}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 2a737441-1930-4402-8d77-b2bebba308a3 0853a681-27c8-4100-a2fd-82013e970683 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # USB3 link power management off (unhide attribute + set)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\2a737441-1930-4402-8d77-b2bebba308a3\d4e98f31-5ffe-4ce1-be31-1b38b384c009', value: 'Attributes', type: REG_DWORD, data: '0', option: 'disable-powersave'}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # Unpark CPU cores (unhide core-parking min cores + set 100%)
+  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583', value: 'Attributes', type: REG_DWORD, data: '0', option: 'disable-powersave'}
+  - !cmd: {command: 'powercfg /setacvalueindex 99999999-9999-9999-9999-999999999999 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+  # Re-apply plan so changes take effect
+  - !cmd: {command: 'powercfg /SETACTIVE 99999999-9999-9999-9999-999999999999 >nul 2>&1', runas: currentUserElevated, wait: true, option: 'disable-powersave'}
+
+  # ==========================================================================
+  # SECTION 34 - POST-INSTALL TOOLKIT  (FR33THY Ultimate)
+  #   Deployed to C:\AkariOS\Ultimate by Section 01 robocopy. Unblock the
+  #   scripts (Mark-of-the-Web) and drop a desktop shortcut for manual use.
+  # ==========================================================================
+  - !status: {status: 'Installing Post-Install Toolkit'}
+  - !powerShell: {command: 'Get-ChildItem -Path ($env:SystemDrive + ''\AkariOS\Ultimate'') -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true}
+  - !powerShell: {command: '$w=New-Object -ComObject WScript.Shell; $l=$w.CreateShortcut($env:PUBLIC + ''\Desktop\AkariOS Toolkit.lnk''); $l.TargetPath=($env:SystemDrive + ''\AkariOS\Ultimate''); $l.IconLocation=($env:SystemRoot + ''\System32\imageres.dll,109''); $l.Save()', runas: currentUserElevated, wait: true}
+
+  # ==========================================================================
+  # SECTION 35 - FILE ASSOCIATIONS
+  #   Uses bundled SetFileTypeAssociation.ps1 (SFTA) from Executables\.
+  # ==========================================================================
+  - !status: {status: 'Setting file associations'}
+  - !powerShell: {command: '.\SetFileTypeAssociation.ps1', exeDir: true, wait: true, runas: currentuser}
+
+  # ==========================================================================
+  # SECTION 36 - WALLPAPER / LOCKSCREEN / PROFILE PICTURE
+  #   Images deployed to C:\Windows\Web\AkariOS\ by Section 01 robocopy.
+  # ==========================================================================
+  - !status: {status: 'Changing Wallpaper & Lockscreen'}
+  - !powerShell: {command: '$path=''C:\Windows\Web\AkariOS\img0.png''; Get-ChildItem ''Registry::HKU'' | ForEach-Object {$key=$_.Name; [microsoft.win32.registry]::SetValue($key+''\Control Panel\Desktop'',''WallPaper'',$path,[Microsoft.Win32.RegistryValueKind]::String)}; Add-Type -TypeDefinition ''using System.Runtime.InteropServices; public class Wallpaper{[DllImport(\"user32.dll\",CharSet=CharSet.Auto)]public static extern int SystemParametersInfo(int uAction,int uParam,string lpvParam,int fuWinIni);}''; [Wallpaper]::SystemParametersInfo(20,0,$path,3)', runas: currentUserElevated, wait: true}
+  - !powerShell: {command: 'Add-Type -AssemblyName System.Runtime.WindowsRuntime; [Windows.Storage.StorageFile,Windows.Storage,ContentType=WindowsRuntime] | Out-Null; [Windows.System.UserProfile.LockScreen,Windows.System.UserProfile,ContentType=WindowsRuntime] | Out-Null; $a=[System.WindowsRuntimeSystemExtensions].GetMethods(); $f=($a|Where-Object{$_.Name -eq ''AsTask'' -and $_.GetParameters()[0].ParameterType.Name -eq ''IAsyncOperation`1''})[0].MakeGenericMethod([Windows.Storage.StorageFile]).Invoke($null,@([Windows.Storage.StorageFile]::GetFileFromPathAsync(''C:\Windows\Web\AkariOS\img0.png''))).GetAwaiter().GetResult(); ($a|Where-Object{$_.Name -eq ''AsTask'' -and $_.GetParameters()[0].ParameterType.Name -eq ''IAsyncAction''})[0].Invoke($null,@([Windows.System.UserProfile.LockScreen]::SetImageFileAsync($f))).GetAwaiter().GetResult()', runas: currentUserElevated, wait: true}
+  # Profile picture from bundled profile.png
+  - !powerShell: {command: 'Add-Type -AssemblyName System.Drawing; $img=[System.Drawing.Image]::FromFile((Join-Path $PWD ''profile.png'')); $u=(Get-CimInstance Win32_ComputerSystem).UserName; $sid=(New-Object System.Security.Principal.NTAccount($u)).Translate([System.Security.Principal.SecurityIdentifier]).Value; $dest=''C:\Users\Public\AccountPictures\''+$sid; if(!(Test-Path $dest)){New-Item -Path $dest -ItemType Directory -Force|Out-Null}; $reg=''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AccountPicture\Users\''+$sid; if(!(Test-Path $reg)){New-Item -Path $reg -Force|Out-Null}; @(1080,448,240,192,96,64,48,40,32)|ForEach-Object{$b=New-Object System.Drawing.Bitmap($_,$_);$g=[System.Drawing.Graphics]::FromImage($b);$g.DrawImage($img,0,0,$_,$_);$f=$dest+''\Image''+$_+''.png'';$b.Save($f);$g.Dispose();$b.Dispose();Set-ItemProperty -Path $reg -Name (''Image''+$_) -Value $f -Type String}; $img.Dispose()', exeDir: true, runas: currentUserElevated, wait: true}
+  - !taskKill: {name: 'explorer'}
+
+  # ==========================================================================
+  # SECTION 37 - SYSTEM RESTORE  (SAFETY NET - decision #4, WinSux logic)
+  #   Enable System Restore and create a fresh "AkariOS" restore point.
+  #   This is why Sections 17/28 avoid VSS and Section 39 avoids delete-shadows.
+  # ==========================================================================
+  - !status: {status: 'Creating Restore Point'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore', value: 'SystemRestorePointCreationFrequency', type: REG_DWORD, data: '0'}
+  - !powerShell: {command: 'Enable-ComputerRestore -Drive ''C:\'' -ErrorAction SilentlyContinue; Checkpoint-Computer -Description ''AkariOS'' -RestorePointType ''MODIFY_SETTINGS'' -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore', value: 'SystemRestorePointCreationFrequency', operation: 'delete'}
+
+  # ==========================================================================
+  # SECTION 38 - REBUILD PERF COUNTERS
+  # ==========================================================================
+  - !status: {status: 'Rebuilding Perf Counters'}
+  - !run: {exe: 'lodctr', args: '/r'}
+  - !run: {exe: 'lodctr', args: '/r'}
+  - !run: {exe: 'winmgmt', args: '/resyncperf'}
+
+  # ==========================================================================
+  # SECTION 39 - CLEANUP
+  #   NOTE: 'vssadmin delete shadows' is deliberately OMITTED so the restore
+  #   point created in Section 37 survives (safety net, decision #4).
+  # ==========================================================================
+  - !status: {status: 'Cleaning up'}
+  - !file: {path: '%SystemDrive%\PerfLogs'}
+  - !file: {path: '%SystemDrive%\inetpub'}
+  - !cmd: {command: 'del /f /s /q "%WINDIR%\Temp\*" >nul 2>&1', wait: true}
+  - !cmd: {command: 'for /f "tokens=*" %i in (''wevtutil el'') do wevtutil cl "%i" >nul 2>&1', wait: true}
+
+  # ==========================================================================
+  # SECTION 40 - END
+  # ==========================================================================
+  # Desktop icon cleanup: wipe stored icon positions so Windows resets to a clean layout on first login
+  - !registryKey: {path: 'HKCU\Software\Microsoft\Windows\Shell\Bags\1\Desktop', operation: delete}
+  - !status: {status: 'AkariOS V6 - Done'}
