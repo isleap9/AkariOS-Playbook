@@ -1,5 +1,23 @@
   # SECTION 40 - END
   # ==========================================================================
-  # Desktop icon cleanup: wipe stored icon positions so Windows resets to a clean layout on first login
-  - !registryKey: {path: 'HKCU\Software\Microsoft\Windows\Shell\Bags\1\Desktop', operation: delete}
+  # Desktop icon cleanup: wipe stored icon positions so Windows resets to a
+  # clean, auto-aligned grid on first login.
+  # Explorer is already killed (Section 36), but we kill it again here as a
+  # safety net in case something restarted it between then and now.
+  # --------------------------------------------------------------------------
+  # Approach:
+  #   1. Stop explorer if running (ensures IconCache.db is not locked).
+  #   2. Delete HKCU\Software\Microsoft\Windows\Shell\Bags\1\Desktop
+  #      — stored per-desktop icon positions.
+  #   3. Delete HKCU\Software\Microsoft\Windows\Shell\BagInfo
+  #      — layout metadata (icon size, sort order, view mode).
+  #   4. Delete IconCache.db from all user profiles
+  #      — forces Windows to rebuild icon cache from scratch.
+  # On first login, Windows creates fresh Bags and IconCache with default
+  # auto-arrange behavior.
+  # --------------------------------------------------------------------------
   - !status: {status: 'AkariOS V6 - Done'}
+  - !taskKill: {name: 'explorer'}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\Windows\Shell\Bags\1\Desktop', operation: delete}
+  - !registryKey: {path: 'HKCU\Software\Microsoft\Windows\Shell\BagInfo', operation: delete}
+  - !powerShell: {command: 'Get-ChildItem "C:\Users\*" -Force | ForEach-Object { $ic = Join-Path $_.FullName "AppData\Local\IconCache.db"; if (Test-Path $ic) { Remove-Item -Force $ic -ErrorAction SilentlyContinue } }', runas: currentUserElevated, wait: true}

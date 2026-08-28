@@ -1,0 +1,6 @@
+# AME Wizard log files (VM output artifacts — do not commit)
+Output.txt
+Log.yml
+
+# Build artifacts
+Configuration/custom.yml.bak

@@ -17,7 +17,7 @@
   - !cmd: {command: '"%temp%\Brave.exe" /silent /install', runas: currentUserElevated, option: 'browser-brave'}
 
   - !status: {status: 'Installing LibreWolf', option: 'browser-librewolf'}
-  - !run: {exe: 'winget', args: 'install -e --id LibreWolf.LibreWolf --silent --accept-package-agreements --accept-source-agreements', runas: currentUserElevated, option: 'browser-librewolf'}
+  - !run: {exe: 'winget', args: 'install -e --id LibreWolf.LibreWolf --source winget --silent --accept-package-agreements --accept-source-agreements', runas: currentUserElevated, option: 'browser-librewolf'}
 
   - !status: {status: 'Installing Firefox', option: 'browser-firefox'}
   - !download: {url: 'https://download.mozilla.org/?product=firefox-latest&os=win64&lang=en-US', destination: '%temp%\Firefox.exe', overwrite: true, option: 'browser-firefox'}
