@@ -12,7 +12,7 @@ Restructure and audit the AkariOS Windows 11 AME playbook. The playbook is organ
 - [x] **Phase 1: Network Restructuring** - Strip Section 29 to Vain-only network tweaks, remove FSOS TCP/IP stack additions
 - [x] **Phase 2: Feature Audit** - Produce a verified feature matrix mapping all 40 sections, cross-check toggles, audit executables and images
 - [x] **Phase 3: Codebase Restructuring** - Modularize custom.yml into Configuration/sections/ + build script, get user approval
-- [ ] **Phase 4: Bug Verification** - Verify NCSI fix, desktop cleanup, and LibreWolf winget install
+- [x] **Phase 4: Bug Verification** - Verify NCSI fix, desktop cleanup, and LibreWolf winget install
 
 ## Phase Details
 
@@ -72,7 +72,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: Verify NCSI fix, desktop cleanup, and LibreWolf winget install
+- [x] 04-01: Verify NCSI fix, desktop cleanup, and LibreWolf winget install
 
 ## Progress
 
@@ -84,7 +84,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 || 1. Network Restructuring | 1/1 | Complete | 2026-08-28 |
 || 2. Feature Audit | 1/1 | Complete | 2026-08-28 |
 || 3. Codebase Restructuring | 1/1 | Complete | 2026-08-28 |
-|| 4. Bug Verification | 0/1 | Not started | - |
+|| 4. Bug Verification | 1/1 | Complete | 2026-08-28 |
 
 ## Canonical References
 
@@ -116,4 +116,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 - `.planning/codebase/TESTING.md` — Manual verification checklist
 
 ---
-*Last updated: 2026-08-28*
+|*Last updated: 2026-08-28 (all 4 phases complete)*
