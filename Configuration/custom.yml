@@ -1163,7 +1163,7 @@ actions:
   - !scheduledTask: {path: '\Microsoft\Windows\Input\MouseSyncDataAvailable', operation: disable}
 
   # ==========================================================================
-  # SECTION 29 - NIC / NETWORK TWEAKS  (Vain block + WinSux PnPCapabilities=24)
+  # SECTION 29 - NIC / NETWORK TWEAKS  (Vain-only)
   #   IPv6 is intentionally PRESERVED (unlike WinSux). Per-adapter loop over the
   #   net class GUID: disable power-saving/EEE/wake, add PnPCapabilities=24,
   #   keep checksum/LSO/RSC offloads enabled.
@@ -1176,12 +1176,6 @@ actions:
   - !cmd: {command: 'netsh int tcp set global timestamps=disabled >nul 2>&1', runas: currentUserElevated, wait: true}
   - !cmd: {command: 'netsh int udp set global uro=enabled >nul 2>&1', runas: currentUserElevated, wait: true}
   - !powerShell: {command: 'Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing Enable -ErrorAction SilentlyContinue', runas: currentUserElevated, wait: true}
-  # Open full TCP ephemeral port range (FSOS)
-  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters', value: 'MaxUserPort', type: REG_DWORD, data: '65534'}
-  # LAN bandwidth throttling off (FSOS)
-  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters', value: 'DisableBandwidthThrottling', type: REG_DWORD, data: '1'}
-  # UDP datagram send-path optimization (FSOS)
-  - !registryValue: {path: 'HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters', value: 'FastSendDatagramThreshold', type: REG_DWORD, data: '1500'}
 
   # ==========================================================================
   # SECTION 30 - POWER PLAN  (WinSux - Ultimate Performance, high-perf tuned)
